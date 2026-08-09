@@ -2,7 +2,7 @@ import os
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
 
-'''def lire_cv_pdf(chemin_pdf: str) -> str:
+def lire_cv_pdf(chemin_pdf: str) -> str:
     """Extrait le texte brut du CV PDF."""
     if not os.path.exists(chemin_pdf):
         return "CV non trouvé."
@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
     texte = ""
     for page in reader.pages:
         texte += page.extract_text() or ""
-    return texte'''
+    return texte
 
 def lire_portfolio_html(chemin_html: str) -> str:
     """Extrait et nettoie le texte du Portfolio HTML."""
