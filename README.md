@@ -202,8 +202,4 @@ Les contributions sont bienvenues, en particulier :
 
 Pour contribuer : fork le repo, crée une branche, ouvre une pull request avec une description claire du changement.
 
----
-
-## Licence
-
 
