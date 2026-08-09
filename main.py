@@ -121,7 +121,7 @@ def tout_rassembler() -> pd.DataFrame:
 def execution_job():
     print("\n🚀 [AGENT DATA SCIENCE / ANALYTICS / ML / LLM / AI ENGINEERING] Démarrage du scan d'offres...")
 
-    cv_texte = lire_cv_pdf("data/cv.pdf")
+    #cv_texte = lire_cv_pdf("data/cv.pdf")
     portfolio_texte = lire_portfolio_html("data/portfolio.html")
     github_texte = lire_profil_github("Dave-kossi")
 
