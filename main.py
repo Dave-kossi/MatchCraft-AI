@@ -4,8 +4,8 @@ import time
 import random
 import pandas as pd
 from datetime import datetime
-
-from src.parser import lire_cv_pdf, lire_portfolio_html
+# lire_cv_pdf,
+from src.parser import lire_portfolio_html
 from src.github_parser import lire_profil_github
 from src.scraper import collecter_offres
 from src.company_scraper import collecter_offres_grands_groupes, MOTS_CLES_PAR_DEFAUT
