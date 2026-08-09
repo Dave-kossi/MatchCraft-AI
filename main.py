@@ -159,7 +159,7 @@ def execution_job():
             'description': str(row.get('description', ''))
         }
 
-        analyse = analyser_et_rediger(offre_dict, portfolio_texte, github_texte) # a inserer par la suite cv_texte,
+        analyse = analyser_et_rediger(offre_dict, portfolio_texte, github_texte) 
         score = analyse.get('score_adequation', 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
@@ -186,7 +186,7 @@ def execution_job():
     sauvegarder_ids_rejetes(ids_rejetes)
     print("\n✅ [AGENT] Traitement et sauvegarde réussis !")
 
-
+# a inserer par la suite cv_texte,
 # ==========================================
 # EXÉCUTION EN POINT D'ENTRÉE
 # ==========================================
