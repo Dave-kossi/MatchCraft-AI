@@ -87,7 +87,7 @@ def tout_rassembler() -> pd.DataFrame:
     Grands Groupes) et filtre exclusivement les stages/alternances
     Data Science / Analytics / ML / LLM / AI Engineering.
     """
-    print("\n🔄 Collecte globale des opportunités (Data Science, Analytics, ML, LLM & AI Engineering)...")
+    print("\n Collecte globale des opportunités (Data Science, Analytics, ML, LLM & AI Engineering)...")
 
     df_general = collecter_offres(limites=5)
 
@@ -119,7 +119,7 @@ def tout_rassembler() -> pd.DataFrame:
 # WORKFLOW PRINCIPAL DE L'AGENT
 # ==========================================
 def execution_job():
-    print("\n🚀 [AGENT DATA SCIENCE / ANALYTICS / ML / LLM / AI ENGINEERING] Démarrage du scan d'offres...")
+    print("\n [AGENT DATA SCIENCE / ANALYTICS / ML / LLM / AI ENGINEERING] Démarrage du scan d'offres...")
 
     #cv_texte = lire_cv_pdf("data/cv.pdf")
     portfolio_texte = lire_portfolio_html("data/portfolio.html")
@@ -137,7 +137,7 @@ def execution_job():
         print("🏁 [AGENT] Fin de l'exécution.")
         return
 
-    print(f"📊 {len(offres)} offres à évaluer par l'IA...\n")
+    print(f" {len(offres)} offres à évaluer par l'IA...\n")
 
     for _, row in offres.iterrows():
         job_id = str(row.get('job_url', ''))
@@ -191,5 +191,5 @@ def execution_job():
 # EXÉCUTION EN POINT D'ENTRÉE
 # ==========================================
 if __name__ == "__main__":
-    print("🤖 Agent Autonome (Stage / Alternance — Data Science, Analytics, ML, LLM, AI Engineering) démarré !")
+    print(" Agent Autonome (Stage / Alternance — Data Science, Analytics, ML, LLM, AI Engineering) démarré !")
     execution_job()
