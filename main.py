@@ -159,7 +159,7 @@ def execution_job():
             'description': str(row.get('description', ''))
         }
 
-        analyse = analyser_et_rediger(offre_dict, cv_texte, portfolio_texte, github_texte)
+        analyse = analyser_et_rediger(offre_dict, portfolio_texte, github_texte) # a inserer par la suite cv_texte,
         score = analyse.get('score_adequation', 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
