@@ -1,27 +1,35 @@
+import json
 import os
+import random
 import re
 import time
-import random
-import pandas as pd
 from datetime import datetime
-# lire_cv_pdf,
-from src.parser import lire_portfolio_html
-from src.github_parser import lire_profil_github
-from src.scraper import collecter_offres
-from src.company_scraper import collecter_offres_grands_groupes, MOTS_CLES_PAR_DEFAUT
-from src.agent import analyser_et_rediger
-from src.historique import (
-    charger_historique,
-    sauvegarder_historique,
-    purger_historique,
-    JOURS_RETENTION_MAX,
-)
+import pandas as pd
 
+from src.agent import analyser_et_rediger
+from src.company_scraper import MOTS_CLES_PAR_DEFAUT, collecter_offres_grands_groupes
+from src.github_parser import lire_profil_github
+from src.historique import (
+    JOURS_RETENTION_MAX,
+    charger_historique,
+    purger_historique,
+    sauvegarder_historique,
+)
+from src.parser import lire_cv_pdf, lire_portfolio_html
+from src.scraper import collecter_offres
+
+# ==========================================
+# CONFIGURATION MATCHCRAFT AI
+# ==========================================
+GITHUB_USERNAME = "Dave-kossi"
 SEUIL_SCORE_MIN = 70
+
+CHEMIN_CV = "data/cv.pdf"
+CHEMIN_PORTFOLIO = "data/portfolio.html"
 CHEMIN_REJETS = "data/offres_rejetees.json"
 
 # ==========================================
-# FILTRES : STAGE OU ALTERNANCE en Data Science / Analytics / ML / LLM / AI Engineering
+# FILTRES : STAGE OU ALTERNANCE (DATA / IA)
 # ==========================================
 MOTS_CLES_DOMAINE = [
     "data science", "data scientist", "data analyst", "data analytics", "analytics",
@@ -41,14 +49,12 @@ MOTS_CLES_CONTRAT = [
 
 
 def _contient_mot(mots: list, texte: str) -> bool:
-    """Matching à limites de mots — évite les faux positifs du type
-    'ml' dans 'html' ou 'ai' dans 'portail'."""
+    """Matching à limites de mots — évite les faux positifs (ex: 'ml' dans 'html')."""
     return any(re.search(rf"\b{re.escape(mot)}\b", texte) for mot in mots)
 
 
 def est_stage_data_valide(titre: str, description: str) -> bool:
-    """Vérifie que l'offre est un stage OU une alternance dans
-    Data Science / Analytics / ML / LLM / AI Engineering."""
+    """Vérifie que l'offre est un stage/alternance ciblant la Data / IA."""
     texte = f"{titre} {description}".lower()
     est_stage_ou_alternance = _contient_mot(MOTS_CLES_CONTRAT, texte)
     est_domaine_cible = _contient_mot(MOTS_CLES_DOMAINE, texte)
@@ -56,23 +62,20 @@ def est_stage_data_valide(titre: str, description: str) -> bool:
 
 
 # ==========================================
-# OFFRES REJETÉES — évite de re-payer un appel Groq
-# pour une offre déjà scorée sous le seuil lors d'un run précédent
+# GESTION DU CACHE DES REJETS
 # ==========================================
 def charger_ids_rejetes(chemin: str = CHEMIN_REJETS) -> set:
     if not os.path.exists(chemin):
         return set()
     try:
-        import json
         with open(chemin, "r", encoding="utf-8") as f:
             return set(json.load(f))
     except Exception as e:
-        print(f"⚠️ Erreur lors du chargement des rejets : {e}")
+        print(f"⚠️ Erreur chargement rejets : {e}")
         return set()
 
 
 def sauvegarder_ids_rejetes(ids: set, chemin: str = CHEMIN_REJETS):
-    import json
     os.makedirs(os.path.dirname(chemin), exist_ok=True)
     with open(chemin, "w", encoding="utf-8") as f:
         json.dump(list(ids), f, ensure_ascii=False, indent=2)
@@ -82,85 +85,88 @@ def sauvegarder_ids_rejetes(ids: set, chemin: str = CHEMIN_REJETS):
 # COLLECTE MULTI-SOURCES & PRÉ-FILTRAGE
 # ==========================================
 def tout_rassembler() -> pd.DataFrame:
-    """
-    Rassemble les offres de toutes les sources (JobSpy, WTTJ, Stage.fr,
-    Grands Groupes) et filtre exclusivement les stages/alternances
-    Data Science / Analytics / ML / LLM / AI Engineering.
-    """
-    print("\n Collecte globale des opportunités (Data Science, Analytics, ML, LLM & AI Engineering)...")
+    """Rassemble et filtre les offres provenant de toutes les sources."""
+    print("\n🔍 [MatchCraft AI] Lancement de la collecte multi-sources...")
 
     df_general = collecter_offres(limites=5)
-
-    offres_entreprises = collecter_offres_grands_groupes(mots_cles=MOTS_CLES_PAR_DEFAUT, limite=5)
+    offres_entreprises = collecter_offres_grands_groupes(
+        mots_cles=MOTS_CLES_PAR_DEFAUT, limite=5
+    )
     df_entreprises = pd.DataFrame(offres_entreprises)
 
-    liste_df = [df for df in [df_general, df_entreprises] if isinstance(df, pd.DataFrame) and not df.empty]
+    liste_df = [
+        df for df in [df_general, df_entreprises]
+        if isinstance(df, pd.DataFrame) and not df.empty
+    ]
 
     if not liste_df:
         return pd.DataFrame()
 
     df_brut = pd.concat(liste_df, ignore_index=True)
     df_brut = df_brut[df_brut["job_url"].astype(str) != ""]
-    df_brut = df_brut.drop_duplicates(subset=['job_url'], keep='first')
+    df_brut = df_brut.drop_duplicates(subset=["job_url"], keep="first")
 
-    offres_filtrees = []
-    for _, row in df_brut.iterrows():
-        titre = str(row.get('title', ''))
-        desc = str(row.get('description', ''))
+    offres_filtrees = [
+        row for _, row in df_brut.iterrows()
+        if est_stage_data_valide(str(row.get("title", "")), str(row.get("description", "")))
+    ]
 
-        if est_stage_data_valide(titre, desc):
-            offres_filtrees.append(row)
-
-    print(f"🔍 {len(df_brut)} offres scannées au total ➔ {len(offres_filtrees)} stages/alternances Data/ML/IA validés.")
+    print(f"📊 Total scanné : {len(df_brut)} | Retenu après pré-filtrage : {len(offres_filtrees)}")
     return pd.DataFrame(offres_filtrees)
 
 
 # ==========================================
-# WORKFLOW PRINCIPAL DE L'AGENT
+# WORKFLOW PRINCIPAL DU MATCHCRAFT AGENT
 # ==========================================
 def execution_job():
-    print("\n [AGENT DATA SCIENCE / ANALYTICS / ML / LLM / AI ENGINEERING] Démarrage du scan d'offres...")
+    print(f"\n🚀 [MatchCraft AI] Démarrage de l'agent pour {GITHUB_USERNAME}...")
 
-    #cv_texte = lire_cv_pdf("data/cv.pdf")
-    portfolio_texte = lire_portfolio_html("data/portfolio.html")
-    github_texte = lire_profil_github("Dave-kossi")
+    # Chargement des données candidat
+    cv_texte = lire_cv_pdf(CHEMIN_CV) if os.path.exists(CHEMIN_CV) else ""
+    portfolio_texte = lire_portfolio_html(CHEMIN_PORTFOLIO) if os.path.exists(CHEMIN_PORTFOLIO) else ""
+    github_texte = lire_profil_github(GITHUB_USERNAME)
 
     historique = purger_historique(JOURS_RETENTION_MAX)
-    ids_connus = {item['id'] for item in historique if item.get('id')}
+    ids_connus = {item["id"] for item in historique if item.get("id")}
     ids_rejetes = charger_ids_rejetes()
 
     offres = tout_rassembler()
 
     if offres.empty:
-        print("❌ Aucune nouvelle offre de stage/alternance Data/ML/IA trouvée lors de ce passage.")
+        print("❌ Aucune nouvelle opportunité qualifiée lors de ce scan.")
         sauvegarder_historique(historique)
-        print("🏁 [AGENT] Fin de l'exécution.")
+        print("🏁 [MatchCraft AI] Fin du cycle.")
         return
 
-    print(f" {len(offres)} offres à évaluer par l'IA...\n")
+    print(f"⚡ {len(offres)} offres prêtes pour évaluation agentique...\n")
 
     for _, row in offres.iterrows():
-        job_id = str(row.get('job_url', ''))
+        job_id = str(row.get("job_url", ""))
 
-        # Ignore : déjà en base, déjà rejetée dans un run précédent, ou déjà traitée dans ce run
         if not job_id or job_id in ids_connus or job_id in ids_rejetes:
             continue
 
-        entreprise = row.get('company', 'Inconnue')
-        titre = row.get('title', 'Sans titre')
-        raw_site = row.get('site', 'Autre')
+        entreprise = row.get("company", "Inconnue")
+        titre = row.get("title", "Sans titre")
+        raw_site = row.get("site", "Autre")
         source_plateforme = str(raw_site).capitalize() if raw_site else "Autre"
 
-        print(f"⚡ Analyse IA : '{titre}' chez {entreprise} (Source: {source_plateforme})...")
+        print(f"🤖 Analyse MatchCraft : '{titre}' chez {entreprise} ({source_plateforme})...")
 
         offre_dict = {
-            'company': entreprise,
-            'title': titre,
-            'description': str(row.get('description', ''))
+            "company": entreprise,
+            "title": titre,
+            "description": str(row.get("description", "")),
         }
 
-        analyse = analyser_et_rediger(offre_dict, portfolio_texte, github_texte) 
-        score = analyse.get('score_adequation', 0) if analyse else 0
+        # Pipeline LLM (Matching + Rédaction)
+        analyse = analyser_et_rediger(
+            offre=offre_dict,
+            portfolio=portfolio_texte,
+            github=github_texte,
+            cv=cv_texte,
+        )
+        score = analyse.get("score_adequation", 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
             resultat = {
@@ -170,26 +176,25 @@ def execution_job():
                 "url": job_id,
                 "source": source_plateforme,
                 "date_ajout": datetime.now().isoformat(),
-                "analyse": analyse
+                "analyse": analyse,
             }
             historique.append(resultat)
             ids_connus.add(job_id)
-            print(f"  └─ ✅ Offre retenue ! (Match : {score}%)")
+            print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%)")
         else:
             ids_rejetes.add(job_id)
-            print(f"  └─ ❌ Offre écartée (Match : {score}%)")
+            print(f"   └─ ❌ ÉCARTÉE (Score MatchCraft : {score}%)")
 
-        # Évite de marteler l'API Groq sans pause si beaucoup d'offres passent le pré-filtre
         time.sleep(random.uniform(1, 2))
 
     sauvegarder_historique(historique)
     sauvegarder_ids_rejetes(ids_rejetes)
-    print("\n✅ [AGENT] Traitement et sauvegarde réussis !")
+    print("\n✅ [MatchCraft AI] Synchronisation de la base terminée avec succès !")
 
-# a inserer par la suite cv_texte,
+
 # ==========================================
-# EXÉCUTION EN POINT D'ENTRÉE
+# POINT D'ENTRÉE
 # ==========================================
 if __name__ == "__main__":
-    print(" Agent Autonome (Stage / Alternance — Data Science, Analytics, ML, LLM, AI Engineering) démarré !")
+    print("⚡ Démarrage du moteur MatchCraft AI...")
     execution_job()
