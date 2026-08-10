@@ -1,11 +1,12 @@
+import os
 import streamlit as st
 
 from src.historique import (
+    JOURS_RETENTION_MAX,
     charger_historique,
+    formater_date_affichage,
     sauvegarder_historique,
     separer_recentes_obsoletes,
-    formater_date_affichage,
-    JOURS_RETENTION_MAX,
 )
 
 st.set_page_config(
@@ -19,10 +20,10 @@ st.set_page_config(
 # ==========================================
 offres_brutes = charger_historique()
 
-st.title("💼 MatchCraft AI— Tableau de bord")
+st.title("💼 MatchCraft AI — Tableau de bord")
 st.markdown("Explore et gère tes opportunités qualifiées par l'IA (stages & alternances Data Science, Analytics, ML, LLM, AI Engineering).")
 
-# --- CONTROLES DE RECHERCHE ET TRI ---
+# --- CONTRÔLES DE RECHERCHE ET TRI ---
 with st.container():
     col_search, col_source, col_sort = st.columns([2, 1, 1])
 
@@ -84,6 +85,7 @@ with tab_offres:
             score = analyse.get("score_adequation", 0)
             source = item.get("source", "Source inconnue")
             date_affichee = formater_date_affichage(item.get("date_ajout"))
+            cv_pdf_path = item.get("cv_pdf_path")
 
             badge_score = "🟢" if score >= 80 else "🟠"
             item_id = item.get("id")
@@ -113,12 +115,33 @@ with tab_offres:
                         st.write(pts)
 
                 st.markdown("---")
-                st.markdown("### ✉️ Lettre de motivation générée")
-                st.info(analyse.get("lettre_motivation", "Lettre non disponible."))
+                
+                # --- ACTIONABLE OUTPUTS : CV PDF & LETTRE ---
+                col_act_cv, col_act_lettre = st.columns([1, 2])
+                
+                with col_act_cv:
+                    st.markdown("### 📄 CV Optimisé")
+                    if cv_pdf_path and os.path.exists(cv_pdf_path):
+                        with open(cv_pdf_path, "rb") as pdf_file:
+                            st.download_button(
+                                label="📥 Télécharger le CV (PDF)",
+                                data=pdf_file,
+                                file_name=os.path.basename(cv_pdf_path),
+                                mime="application/pdf",
+                                key=f"dl_cv_{item_id}_{idx}",
+                                use_container_width=True
+                            )
+                    else:
+                        st.caption("⚠️ Aucun fichier CV généré pour cette offre.")
 
-                # Suppression sécurisée : uniquement si l'offre a un id valide,
-                # pour éviter qu'une entrée corrompue (id=None) n'en supprime
-                # plusieurs d'un coup via une comparaison None != None.
+                with col_act_lettre:
+                    st.markdown("### ✉️ Lettre de motivation")
+                    lettre_texte = analyse.get("lettre_motivation", "Lettre non disponible.")
+                    st.info(lettre_texte)
+
+                st.markdown("---")
+
+                # Suppression sécurisée
                 if item_id and st.button("🗑️ Supprimer cette offre", key=f"del_{item_id}_{idx}"):
                     nouvelles_offres = [o for o in offres_brutes if o.get('id') != item_id]
                     sauvegarder_historique(nouvelles_offres)
