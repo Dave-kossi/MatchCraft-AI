@@ -161,11 +161,10 @@ def execution_job():
 
         # Pipeline LLM (Matching + Rédaction)
         analyse = analyser_et_rediger(
-            offre=offre_dict,
-            portfolio=portfolio_texte,
-            github=github_texte,
-            cv=cv_texte,
-        )
+        offre=offre_dict,
+        cv_texte=cv_texte,
+        portfolio_texte=portfolio_texte,
+        github_texte=github_texte,)
         score = analyse.get("score_adequation", 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
