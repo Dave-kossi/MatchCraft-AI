@@ -6,8 +6,9 @@ import time
 from datetime import datetime
 import pandas as pd
 
-from src.agent import analyser_et_rediger
+from src.agent import _extraire_et_matcher, analyser_et_rediger
 from src.company_scraper import MOTS_CLES_PAR_DEFAUT, collecter_offres_grands_groupes
+from src.cv_agent import generer_cv_pdf  # Import du module CV
 from src.github_parser import lire_profil_github
 from src.historique import (
     JOURS_RETENTION_MAX,
@@ -49,7 +50,7 @@ MOTS_CLES_CONTRAT = [
 
 
 def _contient_mot(mots: list, texte: str) -> bool:
-    """Matching à limites de mots — évite les faux positifs (ex: 'ml' dans 'html')."""
+    """Matching à limites de mots — évite les faux positifs."""
     return any(re.search(rf"\b{re.escape(mot)}\b", texte) for mot in mots)
 
 
@@ -159,15 +160,21 @@ def execution_job():
             "description": str(row.get("description", "")),
         }
 
-        # Pipeline LLM (Matching + Rédaction)
+        # 1. Pipeline LLM (Matching + Rédaction de la lettre)
         analyse = analyser_et_rediger(
-        offre=offre_dict,
-        cv_texte=cv_texte,
-        portfolio_texte=portfolio_texte,
-        github_texte=github_texte,)
+            offre=offre_dict,
+            cv_texte=cv_texte,
+            portfolio_texte=portfolio_texte,
+            github_texte=github_texte
+        )
+        
         score = analyse.get("score_adequation", 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
+            # 2. Génération du CV PDF sur-mesure pour cette offre qualifiée
+            matching_info = _extraire_et_matcher(offre_dict, cv_texte, portfolio_texte, github_texte)
+            chemin_cv = generer_cv_pdf(offre_dict, analyse_matching=matching_info)
+
             resultat = {
                 "id": job_id,
                 "title": titre,
@@ -176,18 +183,20 @@ def execution_job():
                 "source": source_plateforme,
                 "date_ajout": datetime.now().isoformat(),
                 "analyse": analyse,
+                "cv_pdf_path": chemin_cv,  # Ajout de la référence du fichier CV généré
             }
+            
             historique.append(resultat)
             ids_connus.add(job_id)
-            print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%)")
+            sauvegarder_historique(historique)  # Sauvegarde incrémentale de sécurité
+            print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%) — CV PDF : {chemin_cv}")
         else:
             ids_rejetes.add(job_id)
+            sauvegarder_ids_rejetes(ids_rejetes)  # Sauvegarde incrémentale
             print(f"   └─ ❌ ÉCARTÉE (Score MatchCraft : {score}%)")
 
         time.sleep(random.uniform(1, 2))
 
-    sauvegarder_historique(historique)
-    sauvegarder_ids_rejetes(ids_rejetes)
     print("\n✅ [MatchCraft AI] Synchronisation de la base terminée avec succès !")
 
 
