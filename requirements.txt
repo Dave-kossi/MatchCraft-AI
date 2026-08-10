@@ -1,4 +1,5 @@
-# Lecture et extraction de fichiers (PDF, HTML)
+# Génération de documents & Parsing (PDF / HTML)
+fpdf2>=2.7,<3.0
 pypdf>=4.0,<6.0
 beautifulsoup4>=4.12,<5.0
 
@@ -7,12 +8,12 @@ python-jobspy>=1.1,<2.0
 requests>=2.31,<3.0
 urllib3>=2.0,<3.0
 
-# IA, Modèles & Analyse
+# IA & Modèles LLM (Groq)
 groq>=0.11,<1.0
 
-# Automatisation & Gestion d'environnement
+# Traitement de données & Automatisation
+pandas>=2.0,<3.0
 python-dotenv>=1.0,<2.0
 
 # Interface Web & Dashboard
 streamlit>=1.35,<2.0
-pandas>=2.0,<3.0
