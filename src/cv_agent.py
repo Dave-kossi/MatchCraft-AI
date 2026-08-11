@@ -5,7 +5,12 @@ import unicodedata
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 import matplotlib
-import groq
+
+# Importation de la gestion unifiée des clients LLM
+try:
+    from src.llm_providers import obtenir_client_llm
+except ImportError:
+    from llm_providers import obtenir_client_llm
 
 # ==========================================
 # 0. CONFIGURATION & DONNÉES CIBLE (FIGÉES)
@@ -94,7 +99,7 @@ class PDFCV(FPDF):
     def _charger_police_unicode(self):
         """Tente de charger une police TrueType système pour un rendu UTF-8 propre."""
         try:
-            # Recherche DejaVuSans via matplotlib si dispo
+            # Recherche DejaVuSans via matplotlib si disponible
             font_path = matplotlib.font_manager.findfont('DejaVu Sans')
             if os.path.exists(font_path):
                 self.add_font("DejaVu", "", font_path)
@@ -220,10 +225,11 @@ class PDFCV(FPDF):
 # ==========================================
 
 def _appel_groq_json(prompt: str) -> dict:
-    """Effectue un appel Groq en forçant le format JSON."""
-    client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    """Effectue un appel LLM multi-fournisseur en forçant le format JSON."""
+    client, model = obtenir_client_llm()
+    
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model=model,
         messages=[
             {"role": "system", "content": "Tu es un expert RH et relecteur de CV. Tu réponds STRICTEMENT un objet JSON valide."},
             {"role": "user", "content": prompt}
@@ -231,11 +237,19 @@ def _appel_groq_json(prompt: str) -> dict:
         response_format={"type": "json_object"},
         temperature=0.2
     )
-    return json.loads(response.choices[0].message.content)
+    
+    raw_content = response.choices[0].message.content
+    # Nettoyage Markdown au cas où le modèle inclut ```json ... ```
+    if "```json" in raw_content:
+        raw_content = raw_content.split("```json")[1].split("```")[0].strip()
+    elif "```" in raw_content:
+        raw_content = raw_content.split("```")[1].split("```")[0].strip()
+
+    return json.loads(raw_content)
 
 
 def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) -> dict:
-    """Interroge Llama-3 pour sélectionner les projets les plus pertinents et rédiger l'accroche."""
+    """Interroge le LLM pour sélectionner les projets les plus pertinents et rédiger l'accroche."""
     
     projets_dispo_str = json.dumps(CATALOGUE_PROJETS, ensure_ascii=False, indent=2)
     matching_info = json.dumps(analyse_matching, ensure_ascii=False) if analyse_matching else "Non fournie"
@@ -263,7 +277,7 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
     {{
       "tagline": "Description/Accroche en 2 phrases max...",
       "projets_ordonnes": ["Nom_Clé_Projet_1", "Nom_Clé_Projet_2"],
-      "competences_cles": ["Python", "PyTorch", "RAG", ...]
+      "competences_cles": ["Python", "PyTorch", "RAG"]
     }}
     """
 
@@ -275,8 +289,9 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
         raise KeyError("Clés manquantes dans le JSON retourné")
     except Exception as e:
         print(f"⚠️ Erreur sélection contenu CV ({e}) — utilisation du fallback.")
+        nom_entreprise = offre.get("entreprise") or "l'entreprise"
         return {
-            "tagline": f"Ingénieur IA & Data Science passionné par le déploiement de solutions d'IA générative et de Deep Learning appliquées aux défis de {offre.get('entreprise', 'l\'entreprise')}.",
+            "tagline": f"Ingénieur IA & Data Science passionné par le déploiement de solutions d'IA générative et de Deep Learning appliquées aux défis de {nom_entreprise}.",
             "projets_ordonnes": list(CATALOGUE_PROJETS.keys())[:3],
             "competences_cles": ["Python", "PyTorch", "Deep Learning", "NLP", "LLM", "Docker", "Git"]
         }
@@ -332,11 +347,13 @@ def generer_candidature_complete(texte_offre: str, output_prefix: str = "Candida
     2. Génère le CV PDF sur-mesure (via cv_agent.py).
     3. Rédige la lettre de motivation (via agent.py).
     """
-    # Importation retardée (lazy) pour éviter les imports circulaires
     try:
-        from agent import _extraire_et_matcher, analyser_et_rediger
+        from src.agent import _extraire_et_matcher, analyser_et_rediger
     except ImportError:
-        raise ImportError("Le module `agent.py` est requis pour exécuter le pipeline complet.")
+        try:
+            from agent import _extraire_et_matcher, analyser_et_rediger
+        except ImportError:
+            raise ImportError("Le module `agent.py` est requis pour exécuter le pipeline complet.")
 
     print("🔍 Analyse de l'offre et calcul du matching...")
     analyse_matching = _extraire_et_matcher(texte_offre)
@@ -368,7 +385,6 @@ def generer_candidature_complete(texte_offre: str, output_prefix: str = "Candida
 # ==========================================
 
 if __name__ == "__main__":
-    # Test autonome du module
     test_offre = {
         "titre": "Ingénieur IA & LLM",
         "entreprise": "TechCorp",
