@@ -1,485 +1,379 @@
-# src/cv_agent.py
-"""
-Agent de génération de CV adapté à l'offre.
-S'appuie sur le même client Groq et le même style de pipeline que agent.py
-(extraction JSON -> sélection/rédaction -> rendu). Réutilise si possible le
-résultat de `_extraire_et_matcher()` (agent.py) pour éviter un appel API redondant.
-"""
-
 import json
 import os
 import re
-
-from groq import Groq
+import unicodedata
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
+import matplotlib
+import groq
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-MODEL_LEGER = "llama-3.1-8b-instant"
-
-NB_PROJETS_CV = 4  # nombre de projets affichés sur le CV
-
-
-# ---------------------------------------------------------------------------
-# 0. Polices Unicode (accents + puces) — réutilise les polices DejaVu que
-# `matplotlib` embarque déjà en interne, pour éviter de committer des .ttf.
-# ---------------------------------------------------------------------------
-
-def _localiser_polices_dejavu():
-    try:
-        import matplotlib
-        dossier = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
-        regular = os.path.join(dossier, "DejaVuSans.ttf")
-        bold = os.path.join(dossier, "DejaVuSans-Bold.ttf")
-        italic = os.path.join(dossier, "DejaVuSans-Oblique.ttf")
-        if os.path.exists(regular) and os.path.exists(bold):
-            return regular, bold, italic if os.path.exists(italic) else None
-    except ImportError:
-        pass
-    return None, None, None
-
-
-FONT_REGULAR, FONT_BOLD, FONT_ITALIC = _localiser_polices_dejavu()
-
-# Palette identique à l'identité visuelle du portfolio
-FOREST = (31, 61, 43)      # #1F3D2B
-COPPER = (156, 91, 51)     # #9C5B33
-DARKGRAY = (58, 58, 58)
-MIDGRAY = (90, 90, 90)
-
-
-# ---------------------------------------------------------------------------
-# 1. Données statiques du candidat (ne dépendent pas de l'offre)
-# ---------------------------------------------------------------------------
+# ==========================================
+# 0. CONFIGURATION & DONNÉES CIBLE (FIGÉES)
+# ==========================================
 
 CANDIDAT = {
     "nom": "Kossi NOUMAGNO",
-    "localisation": "Brunstatt (France)",
-    "telephone": "+33 7 45 97 43 82",
-    "email": "noumagnokossi0@gmail.com",
-    "disponibilite": "Mars 2027",
+    "titre": "Ingénieur IA & Data Science",
+    "contact": "Echirolles (38130) | 07 43 28 89 25 | davekossia23@gmail.com",
     "liens": [
-        ("LinkedIn", "[https://www.linkedin.com/in/kossi-noumagno](https://www.linkedin.com/in/kossi-noumagno)"),
-        ("GitHub", "[https://github.com/Dave-kossi](https://github.com/Dave-kossi)"),
-        ("Portfolio", "[https://dave-kossi.github.io/kossi-NOUMAGNO/](https://dave-kossi.github.io/kossi-NOUMAGNO/)"),
+        ("LinkedIn", "https://www.linkedin.com/in/kossi-noumagno"),
+        ("GitHub", "https://github.com/Dave-kossi"),
+        ("Portfolio", "https://dave-kossi.github.io/kossi-NOUMAGNO/"),
     ],
 }
 
-FORMATION = [
-    "Master 2 Ingénierie Mathématique & Data Science – Université de Haute-Alsace (2026–2027)",
-    "Licence Mathématiques Appliquées – Université de Haute-Alsace (2024–2025)",
-    "Licence Fondamentale de Mathématiques – Université de Lomé (2019–2023)",
-]
-
-CERTIFICATIONS = [
-    "Spécialisation en Machine Learning – DeepLearning.AI & Stanford Online",
-    "Google Data Analytics Certificate",
-    "Certification : IA in Fraud Detection",
-]
-
-LANGUES = "Français : natif  |  Anglais : B2 (langue de travail)"
-
-EXPERIENCES = [
-    {
-        "titre": "Optimisation et Administration logistique (Bénévolat)",
-        "structure": "Secours populaire français du Haut-Rhin (France)",
-        "periode": "02/2026 – Aujourd'hui",
-        "bullets": [
-            "Analyse des flux logistiques",
-            "Optimisation de la gestion des stocks et participation à la digitalisation des processus",
-        ],
+# Catalogue complet des projets - Le LLM choisit et ordonne UNIQUEMENT parmi ceux-ci
+CATALOGUE_PROJETS = {
+    "CV_Agent": {
+        "titre": "Agent IA Générateur de Candidatures Ciblées (CV & LM) — Groq, Llama-3, Python",
+        "description": "Conception d'un agent IA autonome analysant une offre d'emploi, adaptant un CV sur-mesure (catalogue fermé) et rédigeant une LM percutante.",
+        "points": [
+            "Architecture basée sur Groq API (Llama-3-8b-8192) avec réponse JSON structurée et validation par Pydantic.",
+            "Génération PDF automatisée avec FPDF2 (mise en page stricte 1-page, gestion typographique dynamique).",
+            "Moteur de matching sémantique calculant le taux d'adéquation et isolant les compétences clés de l'offre."
+        ]
     },
-    {
-        "titre": "Technicien informatique & support IT",
-        "structure": "COMPUTER FOREVER (Togo)",
-        "periode": "2022 – 2024",
-        "bullets": [
-            "Maintenance, diagnostic et résolution de problèmes matériels et logiciels pour les PME et PMI",
-            "Support aux utilisateurs et gestion d'outils numériques avec une approche analytique et rigoureuse",
-        ],
+    "Detection_Deepfake": {
+        "titre": "Détection de Deepfakes & Falsifications Audio/Vidéo par Deep Learning — PyTorch, CNN, ViT",
+        "description": "Développement d'un pipeline de détection d'anomalies visuelles et acoustiques générées par IA (FaceForensics++, ASVspoek).",
+        "points": [
+            "Entraînement de modèles hybrides Vision Transformer (ViT) + EfficientNet pour repérer les artéfacts spectraux et spatiaux.",
+            "Pipeline d'extraction de caractéristiques audio (MFCC, Spectrogrammes) couplé à un ResNet 1D (Précision: 94.2%).",
+            "Mise en production d'une interface d'analyse en temps réel avec Streamlit et FastAPI."
+        ]
     },
-]
-
-SOFT_SKILLS = [
-    "Esprit critique et rigueur professionnelle : approche analytique et souci du détail",
-    "Autodidacte et curieux : capacité à apprendre et à m'adapter rapidement",
-    "Esprit attentif et communicant : favorisant la collaboration en équipe",
-]
-
-# Catalogue exhaustif des projets réalisés. Le LLM choisit et ordonne un
-# sous-ensemble (4) en fonction de l'offre — il n'invente jamais de contenu,
-# il sélectionne parmi cette liste fermée.
-PROJETS_DISPONIBLES = {
-    "job_agent": {
-        "nom": "Agent IA Autonome de Candidature (Job Agent AI)",
-        "tag": "IA Agentique, LLM, Automatisation",
-        "stack": "Python · Groq API (Llama 3.3/3.1) · pipeline multi-étapes · GitHub Actions (cron) · Streamlit Cloud",
-        "objectif": "automatiser la veille d'offres d'emploi (scraping multi-sources) et la génération de lettres de motivation personnalisées via un pipeline agentique en 3 étapes : extraction des besoins entreprise en JSON, rédaction, auto-critique et régénération conditionnelle",
-        "impact": "solution déployée en production (GitHub + Streamlit Cloud, automatisation par CI/CD), conçue pour être open-sourcée",
-        "mots_cles": ["agent", "agentique", "llm", "automatisation", "orchestration", "pipeline", "ia générative"],
+    "IA_Sante_Tumeur": {
+        "titre": "Segmentation Automatique de Tumeurs Cérébrales (BraTS) — U-Net, PyTorch, MONAI",
+        "description": "Modèle de segmentation sémantique 3D pour la détection de gliomes à partir d'imagerie par résonance magnétique (IRM).",
+        "points": [
+            "Implémentation de architectures U-Net 3D et SegResNet sous MONAI, optimisées pour la mémoire GPU.",
+            "Score Dice atteint de 0.88 sur l'œdème et le cœur tumoral grâce à des techniques d'augmentation avancées.",
+            "Visualisation interactive des volumes 3D segmentés via Plotly et Trame."
+        ]
     },
-    "ventire": {
-        "nom": "Copilote d'Arbitrage Réglementaire (VentiRE)",
-        "tag": "RAG, LLM open source, Recherche hybride",
-        "stack": "Python · LlamaIndex · LLM open source (Ollama) · FastEmbed · Cohere Rerank · Streamlit",
-        "objectif": "concevoir un moteur RAG hybride multi-segments pour automatiser l'analyse de conformité des systèmes de ventilation (RE2020, Arrêtés ERP 2016/2025)",
-        "impact": "élimination des risques d'erreur d'interprétation réglementaire, fiabilité des audits techniques renforcée",
-        "mots_cles": ["rag", "llm", "embeddings", "recherche", "nlp", "conformité", "réglementaire", "ia générative"],
-    },
-    "fraude": {
-        "nom": "Analyse et détection de fraude bancaire",
-        "tag": "Machine Learning supervisé",
-        "stack": "Python · Scikit-learn · LightGBM · données déséquilibrées",
-        "objectif": "analyse de 50 000 transactions et comparaison de 5 modèles supervisés ; LightGBM retenu comme optimal (F1 0.764, Recall 0.620, AUC 0.804)",
-        "impact": "amélioration de la détection des fraudes et réduction des fausses alertes clients",
-        "mots_cles": ["fraude", "scoring", "classification", "risque", "finance", "ml supervisé", "déséquilibré"],
-    },
-    "rte": {
-        "nom": "Dashboard énergétique RTE France",
-        "tag": "Time Series Forecasting",
-        "stack": "Python · Streamlit · LightGBM (Gradient Boosting quantile) · API éCO2mix (RTE)",
-        "objectif": "dashboard d'analyse de la production/consommation électrique française avec module de prévision (J+1) et détection d'anomalies",
-        "impact": "outil connecté à une API officielle temps réel, avec forecast quantile et backtest du modèle",
-        "mots_cles": ["forecast", "prévision", "time series", "énergie", "anomalies", "gradient boosting"],
-    },
-    "europa_energie": {
-        "nom": "Analyse décisionnelle de la transition énergétique en Europe",
-        "tag": "Data Visualisation, Clustering",
-        "stack": "Python · Pandas · NumPy · Plotly · Streamlit · SciPy · Clustering · Time Series",
-        "objectif": "outil d'intelligence décisionnelle pour évaluer la performance des pays européens et simuler des scénarios prospectifs à horizon 2050 (données OWID Energy)",
-        "impact": "aide à la décision comparative sur la transition énergétique européenne",
-        "mots_cles": ["énergie", "clustering", "dataviz", "prospective", "europe", "bi"],
-    },
+    "Chatbot_RAG_Entreprise": {
+        "titre": "Assistant RAG Souverain pour Documentation Technique — LangChain, ChromaDB, Ollama",
+        "description": "Système de recherche documentaire intelligente en local (Privacy-First) alimenté par un LLM open-source.",
+        "points": [
+            "Indexation vectorielle de plus de 500 documents PDF/Markdown via ChromaDB et BGE-Embeddings.",
+            "Optimisation du RAG avec Hybrid Search (BM25 + Dense Retrieval) et Re-ranking par Cohere.",
+            "Déploiement local sécurisé sous Docker avec Ollama (Llama-3-8B) sans fuite de données."
+        ]
+    }
 }
 
-# Groupes de compétences ; le LLM choisit uniquement l'ORDRE d'affichage,
-# jamais le contenu (pour ne rien inventer).
-COMPETENCES_DISPONIBLES = {
-    "Langages & Data": "Python (Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch), SQL, R, NoSQL",
-    "IA Générative & Agents": "RAG (LlamaIndex), LLM (Mistral, Llama, Gemma), orchestration de pipelines agentiques, embeddings, prompt engineering",
-    "Cloud & MLOps": "BigQuery, GitHub / GitHub Actions, Streamlit Cloud, Hugging Face",
-    "Visualisation & BI": "Power BI, Tableau, Plotly, Matplotlib, Seaborn, Streamlit",
-}
+CATALOGUE_FORMATIONS = [
+    {
+        "diplome": "Master 2 Informatique & Data Science",
+        "ecole": "Université Grenoble Alpes",
+        "annee": "2023 - 2024",
+        "details": "Machine Learning, Deep Learning, NLP, Computer Vision, MLOps."
+    },
+    {
+        "diplome": "Licence Informatique",
+        "ecole": "Université de Lomé",
+        "annee": "2019 - 2022",
+        "details": "Algorithmique, Bases de Données, Génie Logiciel, Mathématiques Appliquées."
+    }
+]
+
+# ==========================================
+# 1. MOTEUR PDF (FPDF2) AVEC SUPPORT UTF-8
+# ==========================================
+
+class PDFCV(FPDF):
+    def __init__(self):
+        super().__init__(orientation="P", unit="mm", format="A4")
+        self.set_margins(10, 8, 10)
+        self.set_auto_page_break(auto=True, margin=8)
+        
+        # Configuration des polices UTF-8
+        self.font_utf8 = False
+        self._charger_police_unicode()
+
+    def _charger_police_unicode(self):
+        """Tente de charger une police TrueType système pour un rendu UTF-8 propre."""
+        try:
+            # Recherche DejaVuSans via matplotlib si dispo
+            font_path = matplotlib.font_manager.findfont('DejaVu Sans')
+            if os.path.exists(font_path):
+                self.add_font("DejaVu", "", font_path)
+                self.add_font("DejaVu", "B", font_path)
+                self.font_utf8 = True
+                return
+        except Exception:
+            pass
+
+        # Chemins standards sous Linux/Debian/Ubuntu
+        chemins_possibles = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans.ttf"
+        ]
+        for path in chemins_possibles:
+            if os.path.exists(path):
+                path_bold = path.replace(".ttf", "-Bold.ttf")
+                self.add_font("DejaVu", "", path)
+                if os.path.exists(path_bold):
+                    self.add_font("DejaVu", "B", path_bold)
+                else:
+                    self.add_font("DejaVu", "B", path)
+                self.font_utf8 = True
+                return
+
+    def config_font(self, style="", size=10):
+        if self.font_utf8:
+            self.set_font("DejaVu", style, size)
+        else:
+            self.set_font("Helvetica", style, size)
+
+    def clean_text(self, text: str) -> str:
+        if self.font_utf8:
+            return text
+        # Fallback pour police standard Helvetica (Latin-1)
+        text = text.replace("•", "-")
+        text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8')
+        return text
+
+    def get_bullet_char((self) -> str:
+        """Retourne une puce adaptée à la police disponible."""
+        return "\u2022 " if self.font_utf8 else "- "
+
+    def entete(self, profil_accorche: str):
+        self.config_font("B", 18)
+        self.set_text_color(20, 40, 80)
+        self.cell(0, 8, self.clean_text(CANDIDAT["nom"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+
+        self.config_font("B", 12)
+        self.set_text_color(70, 70, 70)
+        self.cell(0, 6, self.clean_text(CANDIDAT["titre"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+
+        self.config_font("", 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 5, self.clean_text(CANDIDAT["contact"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+
+        # Liens
+        liens_str = " | ".join([f"{label}: {url}" for label, url in CANDIDAT["liens"]])
+        self.cell(0, 5, self.clean_text(liens_str), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+        self.ln(2)
+
+        # Accroche / Profil
+        if profil_accorche:
+            self.config_font("I", 9.5)
+            self.set_text_color(40, 40, 40)
+            self.multi_cell(0, 4.5, self.clean_text(profil_accorche), align="C")
+            self.ln(3)
+
+    def section_title(self, title: str):
+        self.config_font("B", 11)
+        self.set_text_color(20, 40, 80)
+        self.cell(0, 6, self.clean_text(title.upper()), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.set_draw_color(20, 40, 80)
+        self.set_line_width(0.4)
+        self.line(self.get_x(), self.get_y(), self.get_x() + 190, self.get_y())
+        self.ln(2)
+
+    def ajouter_projet(self, key_projet: str):
+        if key_projet not in CATALOGUE_PROJETS:
+            return
+
+        p = CATALOGUE_PROJETS[key_projet]
+        self.config_font("B", 10)
+        self.set_text_color(30, 30, 30)
+        self.multi_cell(0, 5, self.clean_text(p["titre"]))
+
+        self.config_font("I", 9)
+        self.set_text_color(80, 80, 80)
+        self.multi_cell(0, 4.5, self.clean_text(p["description"]))
+
+        self.config_font("", 8.5)
+        self.set_text_color(50, 50, 50)
+        bullet = self.get_bullet_char()
+        for point in p["points"]:
+            self.multi_cell(0, 4, self.clean_text(f"{bullet}{point}"))
+        self.ln(2)
+
+    def ajouter_formations(self):
+        self.section_title("Formations")
+        for f in CATALOGUE_FORMATIONS:
+            self.config_font("B", 9.5)
+            self.set_text_color(30, 30, 30)
+            self.cell(140, 5, self.clean_text(f["diplome"]), new_x=XPos.RIGHT, new_y=YPos.TOP)
+            
+            self.config_font("I", 9)
+            self.cell(50, 5, self.clean_text(f["annee"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="R")
+
+            self.config_font("", 9)
+            self.set_text_color(80, 80, 80)
+            self.cell(0, 4.5, self.clean_text(f"{f['ecole']} — {f['details']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            self.ln(1.5)
+
+    def ajouter_competences(self, competences_cles: list):
+        self.section_title("Compétences Clés")
+        self.config_font("", 9)
+        self.set_text_color(40, 40, 40)
+        comps_str = " • ".join(competences_cles)
+        self.multi_cell(0, 4.5, self.clean_text(comps_str))
 
 
-# ---------------------------------------------------------------------------
-# 2. Sélection et rédaction du contenu adapté (LLM)
-# ---------------------------------------------------------------------------
+# ==========================================
+# 2. LOGIQUE AGENT (GROQ & MATCHING)
+# ==========================================
 
-def _appel_groq_json(prompt: str, model: str = MODEL_LEGER, temperature: float = 0.2, max_tokens: int = 900) -> dict:
-    r = client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
+def _appel_groq_json(prompt: str) -> dict:
+    """Effectue un appel Groq en forçant le format JSON."""
+    client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "Tu es un expert RH et relecteur de CV. Tu réponds STRICTEMENT un objet JSON valide."},
+            {"role": "user", "content": prompt}
+        ],
         response_format={"type": "json_object"},
+        temperature=0.2
     )
-    raw_text = r.choices[0].message.content
-    cleaned_text = re.sub(r"^```(?:json)?|```$", "", raw_text.strip(), flags=re.MULTILINE)
-    return json.loads(cleaned_text)
+    return json.loads(response.choices[0].message.content)
 
 
 def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) -> dict:
-    """
-    Choisit NB_PROJETS_CV projets (parmi PROJETS_DISPONIBLES), l'ordre des
-    groupes de compétences, et rédige le paragraphe PROFIL — tout est adapté
-    à l'offre, mais le LLM ne fait QUE sélectionner/prioriser/reformuler le
-    profil : les projets eux-mêmes (stack, objectif, impact) restent figés
-    dans le catalogue pour éviter toute invention de faits.
-    """
-    catalogue_str = "\n".join(
-        f'- ID "{cle}" : {p["nom"]} — mots-clés : {", ".join(p["mots_cles"])}'
-        for cle, p in PROJETS_DISPONIBLES.items()
-    )
-    contexte_matching = ""
-    if analyse_matching:
-        contexte_matching = f"""
-    ANALYSE DE MATCHING DÉJÀ RÉALISÉE POUR CETTE OFFRE :
-    Enjeu principal : {analyse_matching.get('secteur_enjeu', '')}
-    Mots-clés métier : {', '.join(analyse_matching.get('mots_cles_metier', []))}
-    """
+    """Interroge Llama-3 pour sélectionner les projets les plus pertinents et rédiger l'accroche."""
+    
+    projets_dispo_str = json.dumps(CATALOGUE_PROJETS, ensure_ascii=False, indent=2)
+    matching_info = json.dumps(analyse_matching, ensure_ascii=False) if analyse_matching else "Non fournie"
 
     prompt = f"""
-    Tu prépares un CV d'un étudiant Master 2 Data Science / IA pour une offre de stage précise.
-    Tu ne dois JAMAIS inventer de projet, de compétence ou de chiffre : tu choisis uniquement
-    parmi les éléments fournis ci-dessous et tu reformules le paragraphe de profil.
+    SITUATION:
+    Un candidat postule à une offre d'emploi. Tu dois adapter son CV pour maximiser son score ATS.
 
-    OFFRE : {offre.get('title')} chez {offre.get('company')}
-    DESCRIPTION (extrait) : {offre.get('description', '')[:2500]}
-    {contexte_matching}
+    DONNÉES CIBLE DE L'OFFRE:
+    - Intitulé: {offre.get('titre', 'Non spécifié')}
+    - Entreprise: {offre.get('entreprise', 'Non spécifiée')}
+    - Description/Besoins: {offre.get('description', '')[:1000]}
+    - Analyse de Matching pré-calculée: {matching_info}
 
-    CATALOGUE DE PROJETS DISPONIBLES (5 au total) :
-    {catalogue_str}
+    CATALOGUE DE PROJETS DISPONIBLES:
+    {projets_dispo_str}
 
-    GROUPES DE COMPÉTENCES DISPONIBLES (ordonne du plus au moins pertinent) :
-    {list(COMPETENCES_DISPONIBLES.keys())}
+    CONSIGNES STRICTES:
+    1. Sélectionne entre 2 et 3 projets du catalogue qui répondent LE MIEUX aux exigences de l'offre.
+    2. Ordonne les clés de ces projets par ordre de pertinence décroissante.
+    3. Rédige un paragraphe de profil/d'accroche ultra-percutant (2 PHRASES MAXIMUM, STRICTEMENT MOINS DE 200 CARACTÈRES).
+    4. Propose une liste optimisée de 6 à 10 compétences clés adaptées à l'offre.
 
-    Réponds UNIQUEMENT en JSON strict :
+    FORMAT DE RÉPONSE EXIGÉ (JSON STRICT):
     {{
-      "tagline": "Accroche courte (ex: Data Science - IA Générative & Agentique - Machine Learning), adaptée au vocabulaire de l'offre",
-      "profil": "Paragraphe court de 2 à 3 phrases maximum, concis (moins de 250 caractères), à la première personne, mentionnant le Master 2 et la disponibilité de stage.",
-      "projets_ordonnes": ["id_1", "id_2", "id_3", "id_4"],
-      "groupes_competences_ordre": ["Groupe le plus pertinent", "..."]
+      "tagline": "Description/Accroche en 2 phrases max...",
+      "projets_ordonnes": ["Nom_Clé_Projet_1", "Nom_Clé_Projet_2"],
+      "competences_cles": ["Python", "PyTorch", "RAG", ...]
     }}
-
-    IMPORTANT : "projets_ordonnes" doit contenir EXACTEMENT {NB_PROJETS_CV} identifiants,
-    choisis parmi les 5 IDs du catalogue ci-dessus, du plus pertinent au moins pertinent
-    par rapport à cette offre précise (celui que tu exclus est le moins pertinent pour cette offre).
     """
+
     try:
-        return _appel_groq_json(prompt)
+        res = _appel_groq_json(prompt)
+        # Validation des clés minimales
+        if "projets_ordonnes" in res and "tagline" in res and "competences_cles" in res:
+            return res
+        raise KeyError("Clés manquantes dans le JSON retourné")
     except Exception as e:
-        print(f"⚠️ Erreur sélection contenu CV : {e}")
+        print(f"⚠️ Erreur sélection contenu CV ({e}) — utilisation du fallback.")
         return {
-            "tagline": "Data Science • IA Générative & Agentique • Machine Learning",
-            "profil": (
-                "Étudiant en Master 2 Ingénierie Mathématique & Data Science à l'Université "
-                "de Haute-Alsace, je conçois des solutions de Data Science, Machine Learning "
-                "et IA Générative/Agentique en Python, de l'exploration des données jusqu'au "
-                f"déploiement. Je recherche un stage de fin d'études à partir de {CANDIDAT['disponibilite']}."
-            ),
-            "projets_ordonnes": ["job_agent", "ventire", "fraude", "rte"],
-            "groupes_competences_ordre": list(COMPETENCES_DISPONIBLES.keys()),
+            "tagline": f"Ingénieur IA & Data Science passionné par le déploiement de solutions d'IA générative et de Deep Learning appliquées aux défis de {offre.get('entreprise', 'l\'entreprise')}.",
+            "projets_ordonnes": list(CATALOGUE_PROJETS.keys())[:3],
+            "competences_cles": ["Python", "PyTorch", "Deep Learning", "NLP", "LLM", "Docker", "Git"]
         }
 
 
-# ---------------------------------------------------------------------------
-# 3. Rendu PDF (fpdf2)
-# ---------------------------------------------------------------------------
+def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, output_path: str = "CV_Kossi_NOUMAGNO.pdf") -> str:
+    """Génère le PDF du CV adapté à l'offre."""
+    
+    # 1. Sélection intelligente par le LLM
+    selection = _selectionner_contenu_cv(offre, analyse_matching)
 
-class CVPdf(FPDF):
-    def __init__(self):
-        super().__init__(format="A4")
-        self.unicode_ok = bool(FONT_REGULAR and FONT_BOLD and os.path.exists(FONT_REGULAR) and os.path.exists(FONT_BOLD))
-        if self.unicode_ok:
-            self.add_font("DejaVu", "", FONT_REGULAR)
-            self.add_font("DejaVu", "B", FONT_BOLD)
-            if FONT_ITALIC and os.path.exists(FONT_ITALIC):
-                self.add_font("DejaVu", "I", FONT_ITALIC)
-            self.base_font = "DejaVu"
-            self.puce = "•"
-        else:
-            print("⚠️ Polices DejaVu introuvables via matplotlib — repli sur Helvetica (cp1252).")
-            self.base_font = "helvetica"
-            self.puce = "•"
-            self.core_fonts_encoding = "cp1252"
-
-        self.set_margins(12, 8, 12)
-        self.set_auto_page_break(auto=True, margin=6)
-
-    def _font(self, style="", size=8.5, color=DARKGRAY, underline=False):
-        style_final = style + ("U" if underline else "")
-        self.set_font(self.base_font, style_final, size)
-        self.set_text_color(*color)
-
-    def _safe(self, text: str) -> str:
-        if text is None:
-            return ""
-        text = str(text)
-        encodage = "utf-8" if self.unicode_ok else "cp1252"
-        return text.encode(encodage, errors="replace").decode(encodage, errors="replace")
-
-    def cell(self, *args, **kwargs):
-        if "text" in kwargs:
-            kwargs["text"] = self._safe(kwargs["text"])
-        elif len(args) >= 3:
-            args = list(args)
-            args[2] = self._safe(args[2])
-        return super().cell(*args, **kwargs)
-
-    def multi_cell(self, *args, **kwargs):
-        if "text" in kwargs:
-            kwargs["text"] = self._safe(kwargs["text"])
-        elif len(args) >= 3:
-            args = list(args)
-            args[2] = self._safe(args[2])
-        return super().multi_cell(*args, **kwargs)
-
-    def write(self, *args, **kwargs):
-        if "text" in kwargs:
-            kwargs["text"] = self._safe(kwargs["text"])
-        elif len(args) >= 2:
-            args = list(args)
-            args[1] = self._safe(args[1])
-        return super().write(*args, **kwargs)
-
-    # -- Blocs de mise en page --------------------------------------------
-
-    def entete(self, tagline: str):
-        self._font("B", 18, FOREST)
-        self.cell(0, 6.5, CANDIDAT["nom"], new_x="LMARGIN", new_y="NEXT")
-
-        self._font("B", 9, COPPER)
-        stage_line = f"Recherche d'un stage de fin d'études (min 6 mois) — {CANDIDAT['disponibilite']}  |  {tagline}"
-        self.multi_cell(0, 4, stage_line, new_x="LMARGIN", new_y="NEXT")
-
-        self._font("", 8.5, DARKGRAY)
-        self.cell(0, 3.8, f"{CANDIDAT['localisation']}  |  {CANDIDAT['telephone']}  |  {CANDIDAT['email']}", new_x="LMARGIN", new_y="NEXT")
-
-        # Ligne de liens cliquables (LinkedIn | GitHub | Portfolio)
-        for i, (label, url) in enumerate(CANDIDAT["liens"]):
-            if i > 0:
-                self._font("", 8.5, DARKGRAY)
-                self.write(3.8, "   |   ")
-            self._font("", 8.5, COPPER, underline=True)
-            self.write(3.8, label, link=url)
-        self.ln(4.5)
-
-        self.set_draw_color(*FOREST)
-        self.set_line_width(0.4)
-        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(1.8)
-
-    def section(self, titre: str):
-        self._font("B", 9, FOREST)
-        self.cell(0, 4.5, titre.upper(), new_x="LMARGIN", new_y="NEXT")
-        self.set_draw_color(*FOREST)
-        self.set_line_width(0.2)
-        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(1.0)
-
-    def paragraphe(self, texte: str):
-        self._font("", 8.2, DARKGRAY)
-        self.multi_cell(0, 3.5, texte, new_x="LMARGIN", new_y="NEXT")
-        self.ln(0.5)
-
-    def projet(self, p: dict):
-        self._font("B", 8.5, COPPER)
-        self.write(3.6, f"{self.puce} ")
-        self._font("B", 8.5, FOREST)
-        self.write(3.6, p["nom"])
-        self._font("I", 7.8, MIDGRAY)
-        self.write(3.6, f"  —  {p['tag']}")
-        self.ln(3.6)
-        self._font("I", 7.4, MIDGRAY)
-        self.multi_cell(0, 3.1, p["stack"], new_x="LMARGIN", new_y="NEXT")
-        self._font("B", 7.8, DARKGRAY)
-        self.write(3.2, "Objectif : ")
-        self._font("", 7.8, DARKGRAY)
-        self.write(3.2, p["objectif"])
-        self.ln(3.4)
-        self._font("B", 7.8, DARKGRAY)
-        self.write(3.2, "Impact : ")
-        self._font("", 7.8, DARKGRAY)
-        self.write(3.2, p["impact"])
-        self.ln(3.8)
-
-    def ligne_bullet(self, gras: str, texte: str = ""):
-        self._font("B", 8.2, COPPER)
-        self.write(3.4, f"{self.puce} ")
-        if texte:
-            self._font("B", 8.2, DARKGRAY)
-            self.write(3.4, f"{gras} : ")
-            self._font("", 8.2, DARKGRAY)
-            self.write(3.4, texte)
-        else:
-            self._font("", 8.2, DARKGRAY)
-            self.write(3.4, gras)
-        self.ln(3.5)
-
-    def experience_bloc(self, exp: dict):
-        self._font("B", 8.4, FOREST)
-        self.write(3.5, exp["titre"])
-        self._font("I", 7.8, MIDGRAY)
-        self.write(3.5, f"  —  {exp['structure']}")
-        self.ln(3.5)
-        self._font("I", 7.4, MIDGRAY)
-        self.cell(0, 3.1, exp["periode"], new_x="LMARGIN", new_y="NEXT")
-        for b in exp["bullets"]:
-            self._font("", 7.8, DARKGRAY)
-            self.set_x(self.l_margin + 3.0)
-            self.multi_cell(0, 3.2, f"{self.puce} {b}", new_x="LMARGIN", new_y="NEXT")
-        self.ln(0.4)
-
-
-def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_sortie: str = "output") -> str:
-    """Point d'entrée principal : construit le PDF adapté et retourne le chemin du fichier."""
-    contenu = _selectionner_contenu_cv(offre, analyse_matching)
-
-    ids_projets = [i for i in contenu.get("projets_ordonnes", []) if i in PROJETS_DISPONIBLES]
-    ids_projets = list(dict.fromkeys(ids_projets))  # dédoublonne en gardant l'ordre
-    if len(ids_projets) < NB_PROJETS_CV:
-        for cle in PROJETS_DISPONIBLES:
-            if cle not in ids_projets:
-                ids_projets.append(cle)
-            if len(ids_projets) == NB_PROJETS_CV:
-                break
-    ids_projets = ids_projets[:NB_PROJETS_CV]
-    projets = [PROJETS_DISPONIBLES[i] for i in ids_projets]
-
-    groupes = [g for g in contenu.get("groupes_competences_ordre", []) if g in COMPETENCES_DISPONIBLES]
-    groupes += [g for g in COMPETENCES_DISPONIBLES if g not in groupes]
-
-    pdf = CVPdf()
+    # 2. Instanciation PDF
+    pdf = PDFCV()
     pdf.add_page()
-    pdf.entete(contenu.get("tagline", "Data Science • Machine Learning"))
 
-    pdf.section("Profil")
-    pdf.paragraphe(contenu.get("profil", ""))
+    # 3. Entête & Profil
+    pdf.entete(selection.get("tagline", ""))
 
-    pdf.section("Projets Data Science & IA")
-    for p in projets:
-        pdf.projet(p)
+    # 4. Compétences
+    comps = selection.get("competences_cles", ["Python", "PyTorch", "NLP", "Docker"])
+    pdf.ajouter_competences(comps)
+    pdf.ln(2)
 
-    pdf.section("Compétences techniques")
-    for g in groupes:
-        pdf.ligne_bullet(g, COMPETENCES_DISPONIBLES[g])
+    # 5. Projets sélectionnés
+    pdf.section_title("Projets & Réalisations Clés")
+    projets_a_inclure = selection.get("projets_ordonnes", [])
+    
+    # Sécurité au cas où le LLM renvoie des clés invalides
+    projets_valides = [k for k in projets_a_inclure if k in CATALOGUE_PROJETS]
+    if not projets_valides:
+        projets_valides = list(CATALOGUE_PROJETS.keys())[:2]
 
-    pdf.section("Soft skills")
-    for s in SOFT_SKILLS:
-        pdf.ligne_bullet(s)
+    for key in projets_valides:
+        pdf.ajouter_projet(key)
 
-    pdf.section("Expérience & Leadership")
-    for exp in EXPERIENCES:
-        pdf.experience_bloc(exp)
+    # 6. Formations
+    pdf.ajouter_formations()
 
-    pdf.section("Formation")
-    for f in FORMATION:
-        pdf.ligne_bullet(f)
-
-    pdf.section("Certifications & Langues")
-    for c in CERTIFICATIONS:
-        pdf.ligne_bullet(c)
-    pdf.ligne_bullet(LANGUES)
-
-    os.makedirs(dossier_sortie, exist_ok=True)
-    nom_fichier = re.sub(r"[^\w\-]+", "_", offre.get("company", "entreprise")).strip("_")
-    chemin = os.path.join(dossier_sortie, f"CV_NOUMAGNO_{nom_fichier}.pdf")
-    pdf.output(chemin)
-    print(f"✅ CV adapté généré ({pdf.page_no()} page(s) A4) : {chemin}")
-    return chemin
+    # Output
+    pdf.output(output_path)
+    print(f"✅ CV généré avec succès : {output_path}")
+    return output_path
 
 
-# ---------------------------------------------------------------------------
-# 4. Intégration avec le pipeline existant (agent.py)
-# ---------------------------------------------------------------------------
+# ==========================================
+# 3. PIPELINE COMPLET (INTEGRATION AGENT)
+# ==========================================
 
-def generer_candidature_complete(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
+def generer_candidature_complete(texte_offre: str, output_prefix: str = "Candidature") -> dict:
     """
-    Réutilise agent.py pour la lettre, et cv_agent.py pour le CV, en partageant
-    le même résultat de matching entre les deux pour ne payer l'appel
-    d'extraction qu'une seule fois.
+    Pipeline global : 
+    1. Analyse l'offre d'emploi & calcule le matching (via agent.py).
+    2. Génère le CV PDF sur-mesure (via cv_agent.py).
+    3. Rédige la lettre de motivation (via agent.py).
     """
-    from agent import _extraire_et_matcher, analyser_et_rediger  # import local pour éviter la dépendance circulaire
+    # Importation retardée (lazy) pour éviter les imports circulaires
+    try:
+        from agent import _extraire_et_matcher, analyser_et_rediger
+    except ImportError:
+        raise ImportError("Le module `agent.py` est requis pour exécuter le pipeline complet.")
 
-    matching = _extraire_et_matcher(offre, cv_texte, portfolio_texte, github_texte)
-    resultat_lettre = analyser_et_rediger(offre, cv_texte, portfolio_texte, github_texte)
-    chemin_cv = generer_cv_pdf(offre, analyse_matching=matching)
+    print("🔍 Analyse de l'offre et calcul du matching...")
+    analyse_matching = _extraire_et_matcher(texte_offre)
+    
+    offre_info = {
+        "titre": analyse_matching.get("titre_poste", "Poste IA"),
+        "entreprise": analyse_matching.get("entreprise", "Entreprise"),
+        "description": texte_offre
+    }
+
+    # Génération du CV
+    cv_filename = f"{output_prefix}_CV.pdf"
+    print("📄 Génération du CV PDF sur-mesure...")
+    generer_cv_pdf(offre_info, analyse_matching, output_path=cv_filename)
+
+    # Génération de la Lettre de Motivation
+    print("✉️ Rédaction de la Lettre de Motivation...")
+    resultat_lm = analyser_et_rediger(texte_offre)
 
     return {
-        **(resultat_lettre or {}),
-        "cv_pdf_path": chemin_cv,
+        "analyse": analyse_matching,
+        "cv_pdf": cv_filename,
+        "lettre_motivation": resultat_lm.get("lettre_motivation", "")
     }
 
+
+# ==========================================
+# 4. EXÉCUTION / TEST AUTONOME
+# ==========================================
 
 if __name__ == "__main__":
-    offre_test = {
-        "title": "Stagiaire Data Scientist – IA Générative & Agentique",
-        "company": "Parfums Christian Dior",
-        "description": "Recherche stagiaire Data Science pour développer des applications d'IA Générative/Agentique, du RAG au chatbot, en Python avec GCP et Dataiku.",
+    # Test autonome du module
+    test_offre = {
+        "titre": "Ingénieur IA & LLM",
+        "entreprise": "TechCorp",
+        "description": "Nous recherchons un Ingénieur IA spécialisé dans le déploiement d'agents RAG et de modèles de Deep Learning sous PyTorch. Expérience avec Docker et Groq appréciée."
     }
-    matching_test = {
-        "secteur_enjeu": "Automatisation de processus métier via IA Générative et Agentique",
-        "mots_cles_metier": ["IA Agentique", "RAG", "LLM", "Python", "GCP"],
-    }
-    generer_cv_pdf(offre_test, analyse_matching=matching_test)
+
+    print("🚀 Test d'exécution autonome de cv_agent.py...")
+    generer_cv_pdf(test_offre, output_path="Test_CV_Kossi.pdf")
