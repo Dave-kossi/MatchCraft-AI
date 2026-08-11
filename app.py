@@ -10,52 +10,69 @@ from src.historique import (
     separer_recentes_obsoletes,
 )
 
+# ==========================================
+# CONFIGURATION DE LA PAGE
+# ==========================================
 st.set_page_config(
     page_title="MatchCraft AI",
     page_icon="💼",
     layout="wide"
 )
 
-# Fonction de chargement mise en cache pour des performances optimales
-@st.cache_data
+# ==========================================
+# CHARGEMENT AVEC TTL DYNAMIQUE (1 HEURE)
+# ==========================================
+# ttl=3600 permet de relire le JSON sur le disque toutes les heures, 
+# parfait pour capter vos 4 exécutions quotidiennes du Cron sans rechargement manuel.
+@st.cache_data(ttl=3600)
 def obtenir_historique_cache():
-    return charger_historique()
+    try:
+        return charger_historique()
+    except Exception as e:
+        st.error(f"Erreur lors du chargement de l'historique : {e}")
+        return []
 
-# Helper pour afficher le PDF directement dans l'application
+# Helper pour intégrer et afficher le PDF directement dans Streamlit
 def afficher_pdf_embed(chemin_pdf: str):
-    if os.path.exists(chemin_pdf):
-        with open(chemin_pdf, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="500" type="application/pdf"></iframe>'
-        st.markdown(pdf_display, unsafe_allow_html=True)
+    if chemin_pdf and os.path.exists(chemin_pdf):
+        try:
+            with open(chemin_pdf, "rb") as f:
+                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="500" type="application/pdf"></iframe>'
+            st.markdown(pdf_display, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Impossible de lire le fichier PDF : {e}")
+    else:
+        st.warning("Le fichier PDF est introuvable sur le serveur.")
 
 # ==========================================
-# BOUTON DE RAFRAÎCHISSEMENT SEMAINE / CACHE
+# BARRE LATÉRALE & CONTRÔLES DU CACHE
 # ==========================================
 with st.sidebar:
     st.header("⚙️ Contrôles")
+    st.caption("Synchronisation avec le dépôt")
     if st.button("🔄 Rafraîchir les données", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
 # ==========================================
-# CHARGEMENT & BARRE DE FILTRES
+# CHARGEMENT ET FILTRES D'AFFICHAGE
 # ==========================================
 offres_brutes = obtenir_historique_cache()
 
 st.title("💼 MatchCraft AI — Tableau de bord")
 st.markdown("Explore et gère tes opportunités qualifiées par l'IA (stages & alternances Data Science, Analytics, ML, LLM, AI Engineering).")
 
-# --- CONTRÔLES DE RECHERCHE ET TRI ---
+# --- RECHERCHE, SOURCE ET TRI ---
 with st.container():
     col_search, col_source, col_sort = st.columns([2, 1, 1])
 
     search_query = col_search.text_input(
         "🔍 Rechercher (Entreprise, Titre, Compétence...)",
-        placeholder="Ex: Sephora, Python, NLP..."
+        placeholder="Ex: Enedis, AXA, Python, NLP..."
     )
 
-    sources = ["Toutes"] + sorted({o.get("source", "Inconnue") for o in offres_brutes})
+    sources = ["Toutes"] + sorted({o.get("source", "Inconnue") for o in offres_brutes if isinstance(o, dict)})
     selected_source = col_source.selectbox("🌐 Provenance", sources)
 
     sort_option = col_sort.selectbox(
@@ -63,8 +80,8 @@ with st.container():
         ["Plus récents d'abord", "Plus anciens d'abord", "Meilleur score IA"]
     )
 
-# --- APPLICATION DES FILTRES ---
-offres_filtrees = offres_brutes.copy()
+# --- FILTRAGE DES DONNÉES ---
+offres_filtrees = list(offres_brutes)
 
 if search_query:
     q = search_query.lower()
@@ -88,7 +105,7 @@ elif sort_option == "Meilleur score IA":
 st.divider()
 
 # ==========================================
-# ONGLETS DE L'APPLICATION
+# STRUCTURE EN ONGLETS
 # ==========================================
 tab_offres, tab_sources, tab_gestion = st.tabs([
     f"Offres Qualifiées ({len(offres_filtrees)})",
@@ -97,7 +114,7 @@ tab_offres, tab_sources, tab_gestion = st.tabs([
 ])
 
 # ------------------------------------------
-# ONGLET 1 : LES OFFRES
+# ONGLET 1 : OFFRES ET FICHES
 # ------------------------------------------
 with tab_offres:
     if not offres_filtrees:
@@ -138,10 +155,10 @@ with tab_offres:
                         st.write(pts)
 
                 st.markdown("---")
-                
-                # --- ACTIONABLE OUTPUTS : CV PDF & LETTRE ---
+
+                # --- ACTIONS CV & LETTRE ---
                 col_act_cv, col_act_lettre = st.columns([1, 2])
-                
+
                 with col_act_cv:
                     st.markdown("### 📄 CV Optimisé")
                     if cv_pdf_path and os.path.exists(cv_pdf_path):
@@ -157,7 +174,7 @@ with tab_offres:
                         with st.popover("👁️ Aperçu du CV"):
                             afficher_pdf_embed(cv_pdf_path)
                     else:
-                        st.caption("⚠️ Aucun fichier CV généré pour cette offre.")
+                        st.caption("⚠️ Aucun fichier CV trouvé sur le serveur pour cette offre.")
 
                 with col_act_lettre:
                     st.markdown("### ✉️ Lettre de motivation")
@@ -166,9 +183,8 @@ with tab_offres:
 
                 st.markdown("---")
 
-                # Suppression sécurisée + Invalidation du cache + Nettoyage PDF
+                # --- SUPPRESSION INDIVIDUELLE ---
                 if item_id and st.button("🗑️ Supprimer cette offre", key=f"del_{item_id}_{idx}"):
-                    # Supprimer le fichier PDF associé s'il existe
                     if cv_pdf_path and os.path.exists(cv_pdf_path):
                         try:
                             os.remove(cv_pdf_path)
@@ -181,10 +197,10 @@ with tab_offres:
                     st.success("Offre retirée de la base de données.")
                     st.rerun()
                 elif not item_id:
-                    st.caption("⚠️ Cette entrée n'a pas d'identifiant valide — suppression désactivée par sécurité.")
+                    st.caption("⚠️ Entrée sans identifiant valide.")
 
 # ------------------------------------------
-# ONGLET 2 : STATISTIQUES DE PROVENANCE
+# ONGLET 2 : STATISTIQUES
 # ------------------------------------------
 with tab_sources:
     st.header("Statistiques par plateforme")
@@ -201,11 +217,11 @@ with tab_sources:
         st.write("Aucune offre disponible en mémoire.")
 
 # ------------------------------------------
-# ONGLET 3 : CENTRE DE PURGE
+# ONGLET 3 : PURGE DE L'HISTORIQUE
 # ------------------------------------------
 with tab_gestion:
     st.header("⚙️ Centre de maintenance & Purge mémoire")
-    st.write("Utilise ces options pour libérer la mémoire JSON et ne garder que les données récentes.")
+    st.write("Gestion de la rétention automatique des fichiers JSON et PDF.")
 
     offres_recentes, offres_obsoletes = separer_recentes_obsoletes(offres_brutes, JOURS_RETENTION_MAX)
 
@@ -220,9 +236,8 @@ with tab_gestion:
 
     with col_act1:
         st.subheader(f"🧹 Purge programmée ({JOURS_RETENTION_MAX} jours)")
-        st.caption(f"Supprime immédiatement les offres datant de plus de {JOURS_RETENTION_MAX * 24} heures.")
+        st.caption(f"Supprime les offres datant de plus de {JOURS_RETENTION_MAX * 24} heures.")
         if st.button("Purger les offres obsolètes", type="primary", use_container_width=True):
-            # Supprimer les CVs obsolètes associés
             for item in offres_obsoletes:
                 pdf_p = item.get("cv_pdf_path")
                 if pdf_p and os.path.exists(pdf_p):
@@ -238,11 +253,10 @@ with tab_gestion:
 
     with col_act2:
         st.subheader("⚠️ Réinitialisation complète")
-        st.caption("Vide totalement la base de données JSON et supprime tous les CVs générés.")
+        st.caption("Vide totalement la base JSON et supprime tous les PDF générés.")
         with st.popover("Vider l'historique complet"):
             st.warning("Attention : cette action effacera absolument toutes les offres en mémoire.")
             if st.button("Confirmer l'effacement total", use_container_width=True):
-                # Supprimer tous les CVs associés
                 for item in offres_brutes:
                     pdf_p = item.get("cv_pdf_path")
                     if pdf_p and os.path.exists(pdf_p):
