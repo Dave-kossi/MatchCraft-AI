@@ -134,7 +134,7 @@ class PDFCV(FPDF):
         text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8')
         return text
 
-    def get_bullet_char((self) -> str:
+    def get_bullet_char(self) -> str:
         """Retourne une puce adaptée à la police disponible."""
         return "\u2022 " if self.font_utf8 else "- "
 
