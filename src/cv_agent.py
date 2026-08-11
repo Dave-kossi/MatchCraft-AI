@@ -6,11 +6,11 @@ from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 import matplotlib
 
-# Importation de la gestion unifiée des clients LLM
+# Importation de la fonction d'appel unifiée avec gestion du fallback
 try:
-    from src.llm_providers import obtenir_client_llm
+    from src.llm_providers import appel_json
 except ImportError:
-    from llm_providers import obtenir_client_llm
+    from llm_providers import appel_json
 
 # ==========================================
 # 0. CONFIGURATION & DONNÉES CIBLE (FIGÉES)
@@ -221,35 +221,11 @@ class PDFCV(FPDF):
 
 
 # ==========================================
-# 2. LOGIQUE AGENT (GROQ & MATCHING)
+# 2. LOGIQUE AGENT (INTEGRATION LLM_PROVIDERS)
 # ==========================================
 
-def _appel_groq_json(prompt: str) -> dict:
-    """Effectue un appel LLM multi-fournisseur en forçant le format JSON."""
-    client, model = obtenir_client_llm()
-    
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "Tu es un expert RH et relecteur de CV. Tu réponds STRICTEMENT un objet JSON valide."},
-            {"role": "user", "content": prompt}
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.2
-    )
-    
-    raw_content = response.choices[0].message.content
-    # Nettoyage Markdown au cas où le modèle inclut ```json ... ```
-    if "```json" in raw_content:
-        raw_content = raw_content.split("```json")[1].split("```")[0].strip()
-    elif "```" in raw_content:
-        raw_content = raw_content.split("```")[1].split("```")[0].strip()
-
-    return json.loads(raw_content)
-
-
 def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) -> dict:
-    """Interroge le LLM pour sélectionner les projets les plus pertinents et rédiger l'accroche."""
+    """Interroge le LLM via llm_providers.appel_json pour sélectionner les projets et rédiger l'accroche."""
     
     projets_dispo_str = json.dumps(CATALOGUE_PROJETS, ensure_ascii=False, indent=2)
     matching_info = json.dumps(analyse_matching, ensure_ascii=False) if analyse_matching else "Non fournie"
@@ -281,14 +257,21 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
     }}
     """
 
+    messages = [
+        {"role": "system", "content": "Tu es un expert RH et relecteur de CV. Tu réponds STRICTEMENT par un objet JSON valide."},
+        {"role": "user", "content": prompt}
+    ]
+
     try:
-        res = _appel_groq_json(prompt)
-        # Validation des clés minimales
+        # Utilisation directe du moteur multi-fournisseurs (Groq -> OpenRouter)
+        res = appel_json(messages=messages, taille="leger", temperature=0.2, max_tokens=900)
+        
+        # Validation des clés minimales requises
         if "projets_ordonnes" in res and "tagline" in res and "competences_cles" in res:
             return res
-        raise KeyError("Clés manquantes dans le JSON retourné")
+        raise KeyError("Clés manquantes dans le JSON retourné par le LLM")
     except Exception as e:
-        print(f"⚠️ Erreur sélection contenu CV ({e}) — utilisation du fallback.")
+        print(f"⚠️ Erreur sélection contenu CV ({e}) — utilisation du mode secours.")
         nom_entreprise = offre.get("entreprise") or "l'entreprise"
         return {
             "tagline": f"Ingénieur IA & Data Science passionné par le déploiement de solutions d'IA générative et de Deep Learning appliquées aux défis de {nom_entreprise}.",
@@ -330,7 +313,7 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, output_pat
     # 6. Formations
     pdf.ajouter_formations()
 
-    # Output
+    # Génération finale du fichier PDF
     pdf.output(output_path)
     print(f"✅ CV généré avec succès : {output_path}")
     return output_path
