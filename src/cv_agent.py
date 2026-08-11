@@ -27,7 +27,6 @@ CANDIDAT = {
     ],
 }
 
-# Catalogue complet des projets - Le LLM choisit et ordonne UNIQUEMENT parmi ceux-ci
 CATALOGUE_PROJETS = {
     "CV_Agent": {
         "titre": "Agent IA Générateur de Candidatures Ciblées (CV & LM) — Groq, Llama-3, Python",
@@ -92,55 +91,76 @@ class PDFCV(FPDF):
         self.set_margins(10, 8, 10)
         self.set_auto_page_break(auto=True, margin=8)
         
-        # Configuration des polices UTF-8
         self.font_utf8 = False
+        self.available_styles = set()
         self._charger_police_unicode()
 
     def _charger_police_unicode(self):
-        """Tente de charger une police TrueType système pour un rendu UTF-8 propre."""
+        """Charge DejaVuSans et toutes ses déclinaisons de style disponibles (B, I, BI)."""
+        chemins = []
         try:
-            # Recherche DejaVuSans via matplotlib si disponible
             font_path = matplotlib.font_manager.findfont('DejaVu Sans')
             if os.path.exists(font_path):
-                self.add_font("DejaVu", "", font_path)
-                self.add_font("DejaVu", "B", font_path)
-                self.font_utf8 = True
-                return
+                chemins.append(font_path)
         except Exception:
             pass
 
-        # Chemins standards sous Linux/Debian/Ubuntu
-        chemins_possibles = [
+        chemins.extend([
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans.ttf"
-        ]
-        for path in chemins_possibles:
+        ])
+
+        base_path = None
+        for path in chemins:
             if os.path.exists(path):
-                path_bold = path.replace(".ttf", "-Bold.ttf")
-                self.add_font("DejaVu", "", path)
-                if os.path.exists(path_bold):
-                    self.add_font("DejaVu", "B", path_bold)
-                else:
-                    self.add_font("DejaVu", "B", path)
-                self.font_utf8 = True
-                return
+                base_path = path
+                break
+
+        if base_path:
+            # 1. Regular
+            self.add_font("DejaVu", "", base_path)
+            self.available_styles.add("")
+            
+            # 2. Bold
+            path_bold = base_path.replace(".ttf", "-Bold.ttf")
+            if os.path.exists(path_bold):
+                self.add_font("DejaVu", "B", path_bold)
+                self.available_styles.add("B")
+            else:
+                self.add_font("DejaVu", "B", base_path)
+                self.available_styles.add("B")
+
+            # 3. Oblique/Italic
+            path_ital = base_path.replace(".ttf", "-Oblique.ttf")
+            if os.path.exists(path_ital):
+                self.add_font("DejaVu", "I", path_ital)
+                self.available_styles.add("I")
+
+            # 4. Bold Oblique/Italic
+            path_bold_ital = base_path.replace(".ttf", "-BoldOblique.ttf")
+            if os.path.exists(path_bold_ital):
+                self.add_font("DejaVu", "BI", path_bold_ital)
+                self.available_styles.add("BI")
+
+            self.font_utf8 = True
 
     def config_font(self, style="", size=10):
+        """Définit la police en vérifiant que le style demandé existe pour éviter un crash."""
         if self.font_utf8:
-            self.set_font("DejaVu", style, size)
+            # Si le style demandé (ex: "I") n'a pas pu être chargé, on utilise le style normal ""
+            safe_style = style if style in self.available_styles else ""
+            self.set_font("DejaVu", safe_style, size)
         else:
             self.set_font("Helvetica", style, size)
 
     def clean_text(self, text: str) -> str:
         if self.font_utf8:
             return text
-        # Fallback pour police standard Helvetica (Latin-1)
         text = text.replace("•", "-")
         text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8')
         return text
 
     def get_bullet_char(self) -> str:
-        """Retourne une puce adaptée à la police disponible."""
         return "\u2022 " if self.font_utf8 else "- "
 
     def entete(self, profil_accorche: str):
@@ -156,12 +176,10 @@ class PDFCV(FPDF):
         self.set_text_color(100, 100, 100)
         self.cell(0, 5, self.clean_text(CANDIDAT["contact"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
-        # Liens
         liens_str = " | ".join([f"{label}: {url}" for label, url in CANDIDAT["liens"]])
         self.cell(0, 5, self.clean_text(liens_str), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
         self.ln(2)
 
-        # Accroche / Profil
         if profil_accorche:
             self.config_font("I", 9.5)
             self.set_text_color(40, 40, 40)
@@ -263,10 +281,7 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
     ]
 
     try:
-        # Utilisation directe du moteur multi-fournisseurs (Groq -> OpenRouter)
         res = appel_json(messages=messages, taille="leger", temperature=0.2, max_tokens=900)
-        
-        # Validation des clés minimales requises
         if "projets_ordonnes" in res and "tagline" in res and "competences_cles" in res:
             return res
         raise KeyError("Clés manquantes dans le JSON retourné par le LLM")
@@ -283,26 +298,20 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
 def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, output_path: str = "CV_Kossi_NOUMAGNO.pdf") -> str:
     """Génère le PDF du CV adapté à l'offre."""
     
-    # 1. Sélection intelligente par le LLM
     selection = _selectionner_contenu_cv(offre, analyse_matching)
 
-    # 2. Instanciation PDF
     pdf = PDFCV()
     pdf.add_page()
 
-    # 3. Entête & Profil
     pdf.entete(selection.get("tagline", ""))
 
-    # 4. Compétences
     comps = selection.get("competences_cles", ["Python", "PyTorch", "NLP", "Docker"])
     pdf.ajouter_competences(comps)
     pdf.ln(2)
 
-    # 5. Projets sélectionnés
     pdf.section_title("Projets & Réalisations Clés")
     projets_a_inclure = selection.get("projets_ordonnes", [])
     
-    # Sécurité au cas où le LLM renvoie des clés invalides
     projets_valides = [k for k in projets_a_inclure if k in CATALOGUE_PROJETS]
     if not projets_valides:
         projets_valides = list(CATALOGUE_PROJETS.keys())[:2]
@@ -310,10 +319,8 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, output_pat
     for key in projets_valides:
         pdf.ajouter_projet(key)
 
-    # 6. Formations
     pdf.ajouter_formations()
 
-    # Génération finale du fichier PDF
     pdf.output(output_path)
     print(f"✅ CV généré avec succès : {output_path}")
     return output_path
@@ -347,12 +354,10 @@ def generer_candidature_complete(texte_offre: str, output_prefix: str = "Candida
         "description": texte_offre
     }
 
-    # Génération du CV
     cv_filename = f"{output_prefix}_CV.pdf"
     print("📄 Génération du CV PDF sur-mesure...")
     generer_cv_pdf(offre_info, analyse_matching, output_path=cv_filename)
 
-    # Génération de la Lettre de Motivation
     print("✉️ Rédaction de la Lettre de Motivation...")
     resultat_lm = analyser_et_rediger(texte_offre)
 
@@ -362,10 +367,6 @@ def generer_candidature_complete(texte_offre: str, output_prefix: str = "Candida
         "lettre_motivation": resultat_lm.get("lettre_motivation", "")
     }
 
-
-# ==========================================
-# 4. EXÉCUTION / TEST AUTONOME
-# ==========================================
 
 if __name__ == "__main__":
     test_offre = {
