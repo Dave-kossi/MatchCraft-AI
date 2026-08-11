@@ -18,12 +18,26 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 MODEL_LEGER = "llama-3.1-8b-instant"
 
-# Chemins des polices Unicode (nécessaires pour les accents français ET
-# les puces spéciales). Si absentes, on retombe sur Helvetica + puces ASCII.
-FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
-FONT_REGULAR = os.path.join(FONT_DIR, "DejaVuSans.ttf")
-FONT_BOLD = os.path.join(FONT_DIR, "DejaVuSans-Bold.ttf")
-FONT_ITALIC = os.path.join(FONT_DIR, "DejaVuSans-Oblique.ttf")
+# Localisation des polices Unicode (nécessaires pour les accents français ET
+# les puces spéciales). Au lieu de committer des .ttf dans le repo (source de
+# problèmes Git : fichiers binaires, .gitignore, conflits de merge...), on
+# réutilise les polices DejaVu que le paquet `matplotlib` embarque déjà en
+# interne. Si matplotlib n'est pas installé, on retombe sur Helvetica (cp1252).
+def _localiser_polices_dejavu():
+    try:
+        import matplotlib
+        dossier = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
+        regular = os.path.join(dossier, "DejaVuSans.ttf")
+        bold = os.path.join(dossier, "DejaVuSans-Bold.ttf")
+        italic = os.path.join(dossier, "DejaVuSans-Oblique.ttf")
+        if os.path.exists(regular) and os.path.exists(bold):
+            return regular, bold, italic if os.path.exists(italic) else None
+    except ImportError:
+        pass
+    return None, None, None
+
+
+FONT_REGULAR, FONT_BOLD, FONT_ITALIC = _localiser_polices_dejavu()
 
 # Palette identique à l'identité visuelle du portfolio
 FOREST = (31, 61, 43)      # #1F3D2B
@@ -232,40 +246,29 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
 class CVPdf(FPDF):
     def __init__(self):
         super().__init__(format="A4")
-        self.unicode_ok = os.path.exists(FONT_REGULAR) and os.path.exists(FONT_BOLD)
+        self.unicode_ok = bool(FONT_REGULAR and FONT_BOLD and os.path.exists(FONT_REGULAR) and os.path.exists(FONT_BOLD))
         if self.unicode_ok:
             self.add_font("DejaVu", "", FONT_REGULAR)
             self.add_font("DejaVu", "B", FONT_BOLD)
-            if os.path.exists(FONT_ITALIC):
+            if FONT_ITALIC and os.path.exists(FONT_ITALIC):
                 self.add_font("DejaVu", "I", FONT_ITALIC)
             self.base_font = "DejaVu"
             self.puce = "•"
         else:
-            # Repli : polices DejaVu introuvables (ex: dossier fonts/ non commité
-            # ou chemin différent sur le runner CI). On force l'encodage cp1252
-            # pour les polices standard (Helvetica) : il couvre bullet/tirets
-            # longs/guillemets typographiques/œ, contrairement à latin-1 strict
-            # qui casse dessus. Voir _safe() ci-dessous pour la dernière protection.
-            print("⚠️ Polices DejaVu introuvables (dossier 'fonts/') — repli sur Helvetica (cp1252).")
+            print("⚠️ Polices DejaVu introuvables via matplotlib — repli sur Helvetica (cp1252).")
             self.base_font = "helvetica"
             self.puce = "•"
             self.core_fonts_encoding = "cp1252"
-        self.set_margins(15, 10, 15)
-        self.set_auto_page_break(auto=True, margin=10)
+            
+        # Marges réduites pour maximiser la hauteur utilisable
+        self.set_margins(12, 8, 12)
+        self.set_auto_page_break(auto=False)  # Désactive le saut de page automatique
 
-    def _font(self, style="", size=10, color=DARKGRAY):
+    def _font(self, style="", size=8, color=DARKGRAY):
         self.set_font(self.base_font, style, size)
         self.set_text_color(*color)
 
     def _safe(self, text: str) -> str:
-        """
-        Dernier filet de sécurité : ne DOIT jamais lever d'exception, quel que
-        soit le texte (y compris du texte généré par le LLM, imprévisible).
-        Avec DejaVu (unicode_ok=True), la couverture est large mais pas totale
-        (émojis, symboles rares) -> on encode/décode en UTF-8 pour ne garder
-        que ce que la police peut réellement afficher, en remplaçant le reste.
-        Sans DejaVu, on force cp1252 (couvre bullet, tirets, guillemets, œ).
-        """
         if text is None:
             return ""
         text = str(text)
@@ -297,92 +300,91 @@ class CVPdf(FPDF):
         return super().write(*args, **kwargs)
 
     def entete(self, tagline: str):
-        self._font("B", 20, FOREST)
-        self.cell(0, 9, CANDIDAT["nom"], new_x="LMARGIN", new_y="NEXT")
-        self._font("B", 10, COPPER)
+        self._font("B", 16, FOREST)
+        self.cell(0, 6, CANDIDAT["nom"], new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 8.5, COPPER)
         stage_line = f"Recherche d'un stage de fin d'études (min 6 mois) — {CANDIDAT['disponibilite']}  |  {tagline}"
-        self.multi_cell(0, 5, stage_line, new_x="LMARGIN", new_y="NEXT")
-        self._font("", 9, DARKGRAY)
-        self.cell(0, 5, f"{CANDIDAT['localisation']}  |  {CANDIDAT['telephone']}  |  {CANDIDAT['email']}", new_x="LMARGIN", new_y="NEXT")
-        self._font("", 9, COPPER)
-        self.cell(0, 5, f"{CANDIDAT['linkedin']}   |   {CANDIDAT['github']}   |   {CANDIDAT['portfolio']}", new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 3.8, stage_line, new_x="LMARGIN", new_y="NEXT")
+        self._font("", 8, DARKGRAY)
+        self.cell(0, 3.5, f"{CANDIDAT['localisation']}  |  {CANDIDAT['telephone']}  |  {CANDIDAT['email']}", new_x="LMARGIN", new_y="NEXT")
+        self._font("", 8, COPPER)
+        self.cell(0, 3.5, f"{CANDIDAT['linkedin']}   |   {CANDIDAT['github']}   |   {CANDIDAT['portfolio']}", new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*FOREST)
-        self.set_line_width(0.5)
-        self.ln(2)
+        self.set_line_width(0.4)
+        self.ln(1)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(3)
+        self.ln(1.5)
 
     def section(self, titre: str):
-        self._font("B", 10.5, FOREST)
-        self.cell(0, 5.2, titre.upper(), new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 8.5, FOREST)
+        self.cell(0, 4, titre.upper(), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*FOREST)
-        self.set_line_width(0.3)
+        self.set_line_width(0.2)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(1.2)
+        self.ln(1)
 
     def paragraphe(self, texte: str):
-        self._font("", 9.5, DARKGRAY)
-        self.multi_cell(0, 4.6, texte, new_x="LMARGIN", new_y="NEXT")
+        self._font("", 7.8, DARKGRAY)
+        self.multi_cell(0, 3.2, texte, new_x="LMARGIN", new_y="NEXT")
         self.ln(1)
 
     def projet(self, p: dict):
-        self._font("B", 10, COPPER)
-        self.write(4.6, f"{self.puce} ")
-        self._font("B", 10, FOREST)
-        self.write(4.6, p["nom"])
-        self._font("I", 9, MIDGRAY)
-        self.write(4.6, f"   —  {p['tag']}")
-        self.ln(4.6)
-        self._font("I", 8.5, MIDGRAY)
-        self.multi_cell(0, 3.9, p["stack"], new_x="LMARGIN", new_y="NEXT")
-        self._font("B", 9, DARKGRAY)
-        self.write(4.1, "Objectif : ")
-        self._font("", 9, DARKGRAY)
-        self.write(4.1, p["objectif"])
-        self.ln(4.3)
-        self._font("B", 9, DARKGRAY)
-        self.write(4.1, "Impact : ")
-        self._font("", 9, DARKGRAY)
-        self.write(4.1, p["impact"])
-        self.ln(5.2)
+        self._font("B", 8, COPPER)
+        self.write(3.2, f"{self.puce} ")
+        self._font("B", 8, FOREST)
+        self.write(3.2, p["nom"])
+        self._font("I", 7.5, MIDGRAY)
+        self.write(3.2, f"   —   {p['tag']}")
+        self.ln(3.5)
+        self._font("I", 7.2, MIDGRAY)
+        self.multi_cell(0, 3, p["stack"], new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 7.5, DARKGRAY)
+        self.write(3, "Objectif : ")
+        self._font("", 7.5, DARKGRAY)
+        self.write(3, p["objectif"])
+        self.ln(3.2)
+        self._font("B", 7.5, DARKGRAY)
+        self.write(3, "Impact : ")
+        self._font("", 7.5, DARKGRAY)
+        self.write(3, p["impact"])
+        self.ln(3.5)
 
     def ligne_bullet(self, gras: str, texte: str = ""):
-        self._font("B", 9.5, COPPER)
-        self.write(4.2, f"{self.puce} ")
+        self._font("B", 7.8, COPPER)
+        self.write(3.2, f"{self.puce} ")
         if texte:
-            self._font("B", 9.5, DARKGRAY)
-            self.write(4.2, f"{gras} : ")
-            self._font("", 9.5, DARKGRAY)
-            self.write(4.2, texte)
+            self._font("B", 7.8, DARKGRAY)
+            self.write(3.2, f"{gras} : ")
+            self._font("", 7.8, DARKGRAY)
+            self.write(3.2, texte)
         else:
-            self._font("", 9.5, DARKGRAY)
-            self.write(4.2, gras)
-        self.ln(4.4)
+            self._font("", 7.8, DARKGRAY)
+            self.write(3.2, gras)
+        self.ln(3.2)
 
     def experience_bloc(self, exp: dict):
-        self._font("B", 9.5, FOREST)
-        self.write(4.2, exp["titre"])
-        self._font("I", 8.5, MIDGRAY)
-        self.write(4.2, f"   —  {exp['structure']}")
-        self.ln(4.2)
-        self._font("I", 8, MIDGRAY)
-        self.cell(0, 3.6, exp["periode"], new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 8, FOREST)
+        self.write(3.2, exp["titre"])
+        self._font("I", 7.5, MIDGRAY)
+        self.write(3.2, f"   —   {exp['structure']}")
+        self.ln(3.2)
+        self._font("I", 7, MIDGRAY)
+        self.cell(0, 3, exp["periode"], new_x="LMARGIN", new_y="NEXT")
         for b in exp["bullets"]:
-            self._font("", 8.8, DARKGRAY)
-            self.set_x(self.l_margin + 4)
-            self.multi_cell(0, 3.9, f"{self.puce} {b}", new_x="LMARGIN", new_y="NEXT")
-        self.ln(0.5)
+            self._font("", 7.5, DARKGRAY)
+            self.set_x(self.l_margin + 3)
+            self.multi_cell(0, 3, f"{self.puce} {b}", new_x="LMARGIN", new_y="NEXT")
+        self.ln(1)
 
 
 def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_sortie: str = "output") -> str:
     """Point d'entrée principal : construit le PDF adapté et retourne le chemin du fichier."""
     contenu = _selectionner_contenu_cv(offre, analyse_matching)
 
-    NB_PROJETS_CV = 3  # fixe : garantit la tenue sur une page
+    NB_PROJETS_CV = 3
     ids_projets = [i for i in contenu.get("projets_ordonnes", []) if i in PROJETS_DISPONIBLES]
-    ids_projets = list(dict.fromkeys(ids_projets))  # dédoublonne en gardant l'ordre
+    ids_projets = list(dict.fromkeys(ids_projets))
     if len(ids_projets) < NB_PROJETS_CV:
-        # complète avec les projets par défaut non déjà sélectionnés
         for cle in PROJETS_DISPONIBLES:
             if cle not in ids_projets:
                 ids_projets.append(cle)
@@ -392,7 +394,7 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     projets = [PROJETS_DISPONIBLES[i] for i in ids_projets]
 
     groupes = [g for g in contenu.get("groupes_competences_ordre", []) if g in COMPETENCES_DISPONIBLES]
-    groupes += [g for g in COMPETENCES_DISPONIBLES if g not in groupes]  # sécurité : n'en oublie aucun
+    groupes += [g for g in COMPETENCES_DISPONIBLES if g not in groupes]
 
     pdf = CVPdf()
     pdf.add_page()
@@ -408,10 +410,12 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     pdf.section("Compétences techniques")
     for g in groupes:
         pdf.ligne_bullet(g, COMPETENCES_DISPONIBLES[g])
+    pdf.ln(1)
 
     pdf.section("Soft skills")
     for s in SOFT_SKILLS:
         pdf.ligne_bullet(s)
+    pdf.ln(1)
 
     pdf.section("Expérience & Leadership")
     for exp in EXPERIENCES:
@@ -420,6 +424,7 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     pdf.section("Formation")
     for f in FORMATION:
         pdf.ligne_bullet(f)
+    pdf.ln(1)
 
     pdf.section("Certifications & Langues")
     for c in CERTIFICATIONS:
@@ -430,9 +435,8 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     nom_fichier = re.sub(r"[^\w\-]+", "_", offre.get("company", "entreprise")).strip("_")
     chemin = os.path.join(dossier_sortie, f"CV_NOUMAGNO_{nom_fichier}.pdf")
     pdf.output(chemin)
-    print(f"✅ CV adapté généré : {chemin}")
+    print(f"✅ CV adapté généré (1 page A4) : {chemin}")
     return chemin
-
 
 # ---------------------------------------------------------------------------
 # 4. Intégration avec le pipeline existant (agent.py)
