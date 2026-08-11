@@ -16,6 +16,15 @@ st.set_page_config(
 )
 
 # ==========================================
+# BOUTON DE RAFRAÎCHISSEMENT SEMAINE / CACHE
+# ==========================================
+with st.sidebar:
+    st.header("⚙️ Contrôles")
+    if st.button("🔄 Rafraîchir les données", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
+# ==========================================
 # CHARGEMENT & BARRE DE FILTRES
 # ==========================================
 offres_brutes = charger_historique()
@@ -141,10 +150,11 @@ with tab_offres:
 
                 st.markdown("---")
 
-                # Suppression sécurisée
+                # Suppression sécurisée + Invalidation du cache
                 if item_id and st.button("🗑️ Supprimer cette offre", key=f"del_{item_id}_{idx}"):
                     nouvelles_offres = [o for o in offres_brutes if o.get('id') != item_id]
                     sauvegarder_historique(nouvelles_offres)
+                    st.cache_data.clear()  # Invalide le cache pour forcer le rechargement
                     st.success("Offre retirée de la base de données.")
                     st.rerun()
                 elif not item_id:
@@ -190,6 +200,7 @@ with tab_gestion:
         st.caption(f"Supprime immédiatement les offres datant de plus de {JOURS_RETENTION_MAX * 24} heures.")
         if st.button("Purger les offres obsolètes", type="primary", use_container_width=True):
             sauvegarder_historique(offres_recentes)
+            st.cache_data.clear()
             st.success(f"Purge réussie : {len(offres_obsoletes)} offre(s) supprimée(s) !")
             st.rerun()
 
@@ -200,5 +211,6 @@ with tab_gestion:
             st.warning("Attention : cette action effacera absolument toutes les offres en mémoire.")
             if st.button("Confirmer l'effacement total", use_container_width=True):
                 sauvegarder_historique([])
+                st.cache_data.clear()
                 st.success("La base de données a été réinitialisée.")
                 st.rerun()
