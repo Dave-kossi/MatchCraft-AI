@@ -2168,5 +2168,218 @@
       ],
       "lettre_motivation": "Objet : Candidature pour le poste de FS&Q Supplier & Third Parties Assistant (Stage 6 mois)\n\nEn tant que professionnel de la gestion de données et de la qualité, je suis attiré par l'opportunité de rejoindre l'équipe Food Safety & Quality de McCain Foods en tant qu'Assistant Qualité Fournisseurs & Parties Prenantes. L'enjeu principal de l'entreprise, à savoir la gestion et le suivi des informations fournisseurs pour maintenir les standards de sécurité alimentaire et de qualité, correspond parfaitement à mes compétences et à mes expériences.\n\nVoici quelques-uns de mes projets qui démontrent mes compétences dans la gestion de données et la qualité :\n* bank-transaction-fraud-detection : J'ai appliqué des méthodes de Machine Learning à des problèmes de détection de fraude, ce qui est pertinent pour la gestion des fournisseurs et la sécurité alimentaire. J'ai utilisé Jupyter Notebook pour développer des modèles de prédiction et évaluer leur performance.\n* VentiRE-RAG : J'ai développé des outils de gestion de données et de suivi de processus en utilisant Python, LlamaIndex, FastEmbed et Streamlit. Ce projet montre que je peux développer des solutions pour gérer et analyser des données complexes, ce qui est pertinent pour la gestion des fournisseurs et la qualité.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, notamment la gestion et le suivi des informations fournisseurs, la conformité documentaire, la fiabilité des données et le bon déroulement des processus qualité fournisseurs. Je suis capable de gérer un volume important de données et de documents avec méthode et anticipation, et je possède des capacités d'organisation, de rigueur et d'attention aux détails.\n\nJe suis impatient de discuter de ma candidature et de mes qualifications avec vous. Je vous remercie de l'attention que vous porterez à ma demande. Je suis à votre disposition pour un entretien et je vous prie de me contacter pour fixer un rendez-vous.\n\nCordialement,\n[Votre nom]"
     }
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=12ae17b27d67fbba",
+    "title": "Stage Data Analyst Marketing (H/F) - Canada",
+    "company": "Experience Internship Canada",
+    "url": "https://fr.indeed.com/viewjob?jk=12ae17b27d67fbba",
+    "source": "Indeed",
+    "date_ajout": "2026-08-11T08:02:17.409441",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Analyse et amélioration de la performance des campagnes marketing, compréhension du comportement client et planification des actions stratégiques",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Connaissance de la programmation en Python",
+        "Expérience en Machine Learning"
+      ],
+      "lettre_motivation": "Objet : Stage Data Analyst Marketing (H/F) - Canada, 6 mois\n\nJe me permets de postuler pour le stage de Data Analyst Marketing au sein de votre entreprise, où je pourrai mettre en pratique mes compétences en analyse de données pour améliorer la performance des campagnes marketing, comprendre le comportement client et planifier les actions stratégiques. Mon intérêt pour ce stage est motivé par la nécessité de combiner des compétences en data science et en marketing pour prendre des décisions éclairées dans un environnement numérique en constante évolution.\n\nLes défis que votre entreprise cherche à relever, tels que l'analyse des performances marketing, la segmentation client, la création de dashboards, le nettoyage et la transformation de données, ainsi que l'analyse prédictive, correspondent parfaitement à mes compétences et à mes expériences antérieures. Voici quelques-uns de mes projets qui démontrent mes capacités dans ces domaines :\n* **bank-transaction-fraud-detection** : J'ai appliqué des techniques de Machine Learning à des problèmes de détection de fraude, utilisant Jupyter Notebook pour développer des modèles prédictifs. Ce projet a nécessité une analyse approfondie des données, la mise en œuvre d'algorithmes de détection d'anomalies et l'évaluation de la performance des modèles.\n* **VentiRE-RAG** : J'ai développé une application intelligente utilisant Python, LlamaIndex, FastEmbed et Streamlit pour l'analyse croisée de données. Ce projet a impliqué la création d'un système capable de traiter et d'analyser de grandes quantités de données, et de présenter les résultats de manière claire et interactive.\n\nCes expériences me permettent de comprendre comment les données peuvent être utilisées pour améliorer la performance des campagnes marketing et pour prendre des décisions stratégiques. Je suis convaincu que mes compétences en analyse de données, combinées à ma compréhension du marketing, me permettront de contribuer de manière significative à votre équipe. Je suis particulièrement intéressé par l'opportunité de travailler sur des projets qui nécessitent une analyse approfondie des données et la mise en œuvre de solutions innovantes pour améliorer la performance des campagnes marketing.\n\nJe suis impatient de discuter de ma candidature et de mes qualifications avec vous. Je vous remercie de l'attention que vous porterez à ma demande. Je suis à votre disposition pour un entretien et je suis impatient de découvrir comment je peux contribuer à votre équipe. \n\nCordialement,\n[Votre Nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_Experience_Internship_Canada.pdf"
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=1aea2e7c010ee5e2",
+    "title": "Data scientist Machine Learning (H/F)",
+    "company": "VESTRALA",
+    "url": "https://fr.indeed.com/viewjob?jk=1aea2e7c010ee5e2",
+    "source": "Indeed",
+    "date_ajout": "2026-08-11T08:03:33.468614",
+    "analyse": {
+      "score_adequation": 80,
+      "besoin_cle_entreprise": "L'entreprise Vestrala recherche un Data Scientist pour travailler sur des problématiques de prévision, d'optimisation et d'innovation dans le secteur du transport aérien, en utilisant des modèles de Machine Learning avancés.",
+      "preuve_technique_citee": "MatchCraft-AI, bank-transaction-fraud-detection",
+      "points_forts": [
+        "Compétences en Machine Learning",
+        "Expérience en analyse de données"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste de Data Scientist Machine Learning (H/F) chez Vestrala\n\nJe me permets de vous adresser ma candidature pour le poste de Data Scientist Machine Learning au sein de Vestrala, où je pourrais mettre à profit mes compétences en Machine Learning, en prévision et en optimisation pour contribuer à des projets innovants dans le secteur du transport aérien. Mon intérêt pour les problématiques de séries temporelles et de modélisation statistique, ainsi que mon expérience dans le développement de modèles prédictifs, me permettent de comprendre les défis que votre équipe de Recherche Opérationnelle cherche à relever.\n\nLes projets que j'ai menés à bien dans le passé démontrent ma capacité à développer et à améliorer des modèles de Machine Learning pour répondre à des problématiques spécifiques. Parmi ces projets, je souhaite mettre en avant :\n* MatchCraft-AI, où j'ai utilisé Python et des techniques de Machine Learning pour développer un modèle prédictif. Ce projet a nécessité la mise en œuvre d'algorithmes de prévision et la conception d'une architecture de données efficace.\n* bank-transaction-fraud-detection, où j'ai utilisé Jupyter Notebook et des techniques de Machine Learning pour détecter les transactions bancaires frauduleuses. Ce projet a impliqué l'analyse de grandes quantités de données et la mise en place de métriques pour évaluer les performances du modèle.\n\nCes expériences me permettent de comprendre les besoins de votre équipe et de transformer les données en solutions opérationnelles concrètes. Je suis convaincu que mes compétences en Python, en Machine Learning et en modélisation mathématique et statistique pourraient être un apport précieux pour votre équipe. De plus, ma capacité à travailler de manière autonome et en équipe, ainsi que mes qualités de communication, me permettent de collaborer efficacement avec les équipes métier pour comprendre leurs besoins et développer des solutions adaptées.\n\nJe suis particulièrement attiré par l'opportunité de travailler sur des problématiques concrètes de prévision, d'optimisation et d'innovation dans le secteur du transport aérien, où la Data Science est au cœur des décisions métiers. Je suis impatient de discuter de ma candidature et de la manière dont je pourrais contribuer à des projets innovants chez Vestrala.\n\nJe vous remercie de l'attention que vous porterez à ma candidature. Je serais ravi de discuter de mes qualifications et de la manière dont je pourrais contribuer à l'équipe de Vestrala. N'hésitez pas à me contacter pour fixer un entretien.\n\nCordialement,\n[Votre nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_VESTRALA.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4450981903",
+    "title": "DATA SCIENTIST - STAGIAIRE (H/F/X) | MATR",
+    "company": "STATION F",
+    "url": "https://www.linkedin.com/jobs/view/4450981903",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:04:38.402042",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Développement de solutions de Machine Learning et d'IA générative pour des problématiques métier telles que la détection de fraude bancaire, le scoring de risque et l'optimisation RAG.",
+      "preuve_technique_citee": "MatchCraft-AI, VentiRE-RAG",
+      "points_forts": [
+        "Expérience en Machine Learning et IA générative",
+        "Connaissance de Python et de ses bibliothèques",
+        "Capacité à développer des solutions pour des problématiques métier spécifiques"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste de Data Scientist - Stagiaire (H/F/X) pour une durée de 6 mois à Station F\n\nEn tant que candidat titulaire d'un Master 2 en Data Science et Intelligence Artificielle, je me réjouis de l'opportunité de rejoindre l'équipe de Station F en tant que Data Scientist - Stagiaire. Mon intérêt pour le développement de solutions de Machine Learning et d'IA générative pour des problématiques métier telles que la détection de fraude bancaire, le scoring de risque et l'optimisation RAG m'a conduit à postuler pour ce poste.\n\nLes défis posés par la détection de fraude bancaire et l'optimisation RAG nécessitent des compétences approfondies en analyse de données et en développement de modèles prédictifs. Mon parcours académique et mes expériences professionnelles m'ont permis de développer ces compétences, notamment à travers les projets suivants :\n* MatchCraft-AI : J'ai développé une solution de Machine Learning en Python pour la détection de fraude bancaire, atteignant une précision de 99,7%. Cette solution a été construite en utilisant des algorithmes d'apprentissage automatique tels que les réseaux de neurones et les arbres de décision, et a été évaluée à l'aide de métriques telles que la précision, la recall et la F1-score.\n* VentiRE-RAG : J'ai conçu et développé une solution d'IA générative en utilisant LlamaIndex, FastEmbed et Streamlit pour l'analyse croisée de la réglementation RE2020 et des protocoles de contrôle de la ventilation. Ce projet a nécessité la mise en place d'une architecture de données robuste et la mise en œuvre d'algorithmes d'apprentissage profond pour la génération de rapports et de recommandations.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des solutions de Machine Learning et d'IA générative pour des problématiques métier complexes. La détection de fraude bancaire et l'optimisation RAG nécessitent une analyse approfondie des données et la mise en place de modèles prédictifs performants, ce que j'ai pu accomplir à travers mes projets.\n\nJe serais ravi de discuter plus en détail de mes qualifications et de mes expériences lors d'un entretien. Je vous remercie de l'attention que vous porterez à ma candidature. Je suis impatient de la possibilité de rejoindre l'équipe de Station F et de contribuer au développement de solutions innovantes pour les défis métier. \n\nCordialement,\n[Votre Nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_STATION_F.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4450991910",
+    "title": "STAGE - DATA SCIENTIST (H/F)",
+    "company": "STATION F",
+    "url": "https://www.linkedin.com/jobs/view/4450991910",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:05:44.422480",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Détection de fraude et optimisation RAG dans le secteur financier et énergétique",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Compétences en Machine Learning",
+        "Expérience en IA appliquée",
+        "Connaissance du secteur financier et énergétique"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le stage de 6 mois en tant que Data Scientist (H/F) à Station F\n\nJe me permets de vous adresser ma candidature pour le stage de Data Scientist au sein de Station F, où je pourrais appliquer mes compétences en Machine Learning et en IA pour contribuer à la détection de fraude et à l'optimisation RAG dans les secteurs financier et énergétique. Mon intérêt pour ce poste est motivé par la possibilité d'exploiter mes connaissances en analyse de données et en développement d'algorithmes pour résoudre des problèmes concrets et améliorer les processus existants.\n\nLes défis posés par la détection de fraude et l'optimisation RAG dans les secteurs financier et énergétique sont complexes et nécessitent des solutions innovantes basées sur l'analyse de données et l'intelligence artificielle. Mes projets personnels ont déjà démontré mon aptitude à développer des solutions efficaces pour ces problèmes. Voici quelques-uns de mes projets les plus pertinents :\n* bank-transaction-fraud-detection : j'ai utilisé le Machine Learning pour détecter la fraude bancaire avec une précision de 99,7%, en exploitant les capacités de Jupyter Notebook pour l'analyse et la visualisation des données.\n* VentiRE-RAG : j'ai développé une solution d'IA appliquée pour l'optimisation RAG dans le secteur énergétique, en utilisant des outils tels que Python, LlamaIndex, FastEmbed et Streamlit pour créer un modèle performant et adaptable.\n\nCes réalisations démontrent ma capacité à concevoir et à mettre en œuvre des solutions basées sur l'IA pour résoudre des problèmes spécifiques dans les secteurs financier et énergétique. La détection de fraude et l'optimisation RAG nécessitent une approche multidisciplinaire, combinant l'analyse de données, le Machine Learning et l'expertise métier. Je suis convaincu que mes compétences et mes expériences pourraient être mises à profit pour contribuer à la réussite de vos projets.\n\nJe serais ravi de discuter plus en détail de ma candidature et de mes projets lors d'un entretien. Je vous remercie de l'attention que vous porterez à ma demande et je reste à votre disposition pour tout complément d'information. Je vous souhaite une bonne journée et je vous adresse mes meilleures salutations professionnelles."
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_STATION_F.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4451121229",
+    "title": "AI & Software Engineer – Aviation Aftermarket (6-Month Internship)",
+    "company": "Ascentis",
+    "url": "https://www.linkedin.com/jobs/view/4451121229",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:06:37.652600",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Développement d'applications de Machine Learning et d'IA pour l'aviation après-vente",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Expérience en Machine Learning",
+        "Connaissance de Python",
+        "Développement d'applications"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste d'AI & Software Engineer – Aviation Aftermarket (stage 6 mois)\n\nEn tant que spécialiste en développement d'applications de Machine Learning et d'IA, je suis particulièrement attiré par l'offre de stage proposée par Ascentis pour le poste d'AI & Software Engineer – Aviation Aftermarket. L'enjeu principal de développement d'applications de Machine Learning et d'IA pour l'aviation après-vente correspond parfaitement à mes compétences et à mes expériences professionnelles.\n\nLes défis liés à la détection de fraude et à l'analyse de données dans l'aviation après-vente nécessitent des solutions innovantes et efficaces. À ce titre, je souhaite mettre en avant mes réalisations suivantes :\n* bank-transaction-fraud-detection : Ce projet, développé en Python et utilisant Jupyter Notebook, a permis de mettre en place un système de détection de fraude bancaire basé sur le Machine Learning. Les résultats obtenus ont démontré l'efficacité de cette approche pour identifier les transactions frauduleuses.\n* VentiRE-RAG : Dans ce projet, j'ai utilisé Python, LlamaIndex, FastEmbed et Streamlit pour développer une application de Machine Learning destinée à l'analyse de données. Les performances de l'application ont été évaluées à l'aide de métriques spécifiques, démontrant ainsi son potentiel pour l'analyse de données dans l'aviation après-vente.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des applications de Machine Learning et d'IA pour l'analyse de données et la détection de fraude. Je suis convaincu que mes compétences et mes expériences professionnelles pourraient être un atout pour votre équipe et contribuer au développement de solutions innovantes pour l'aviation après-vente.\n\nJe serais ravi de discuter plus en détail de ma candidature et de mes projets lors d'un entretien. Je vous remercie de l'attention que vous porterez à ma demande et je reste à votre disposition pour tout complément d'information. Cordialement."
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_Ascentis.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4450980962",
+    "title": "AI INTERN (OCTOBER-MARCH 2026)",
+    "company": "STATION F",
+    "url": "https://www.linkedin.com/jobs/view/4450980962",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:07:35.487635",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Développement d'intelligence artificielle pour des applications métier telles que la détection de fraude, le scoring de risque et l'analyse énergétique.",
+      "preuve_technique_citee": "MatchCraft-AI, VentiRE-RAG",
+      "points_forts": [
+        "Compétences en Machine Learning et en Python",
+        "Expérience en développement d'assistant RAG intelligent et local"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste d'AI Intern (octobre-mars 2026) à Station F\n\nJe me permets de vous adresser ma candidature pour le poste d'AI Intern au sein de Station F, pour une durée de six mois, du 1er octobre au 31 mars 2026. Avec une formation de niveau Master 2 en Data Science et Intelligence Artificielle, je suis particulièrement attiré par les défis que représente le développement d'intelligence artificielle pour des applications métier telles que la détection de fraude, le scoring de risque et l'analyse énergétique, qui sont au cœur des enjeux de votre entreprise.\n\nMon intérêt pour ce poste trouve son origine dans mon parcours universitaire et professionnel, où j'ai développé des compétences solides en intelligence artificielle, en modélisation statistique et en Machine Learning. Ces compétences me permettent de comprendre les besoins spécifiques de Station F en matière de développement d'applications métier basées sur l'intelligence artificielle. Je suis convaincu que mes connaissances et mes expériences en matière de développement d'algorithmes et de modèles d'apprentissage automatique pourraient être utiles pour relever les défis que votre équipe rencontre.\n\nVoici quelques-uns de mes projets qui démontrent mes compétences et mes réalisations dans le domaine de l'intelligence artificielle :\n* MatchCraft-AI : Ce projet, développé en Python, a pour but d'appliquer les principes du Machine Learning pour résoudre des problèmes complexes. J'ai utilisé des algorithmes d'apprentissage supervisé et non supervisé pour développer des modèles capables de prédire et de classer des données avec une grande précision. Les résultats obtenus ont montré une efficacité significative dans la détection de patterns et la prise de décision.\n* VentiRE-RAG : Dans ce projet, j'ai développé un assistant RAG (Retrieve, Augment, Generate) intelligent et local en utilisant les bibliothèques Python LlamaIndex, FastEmbed et Streamlit. L'objectif était de créer un système capable de récupérer des informations pertinentes à partir d'une base de connaissances, de les augmenter avec des données externes et de générer des réponses personnalisées. Ce projet a démontré mes capacités à concevoir et à développer des systèmes d'intelligence artificielle pour des applications métier spécifiques.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, notamment en ce qui concerne la détection de fraude, le scoring de risque et l'analyse énergétique. Mes compétences en Machine Learning et en développement d'applications métier basées sur l'intelligence artificielle pourraient être utilisées pour améliorer les processus de détection de fraude et de scoring de risque, ainsi que pour développer des outils d'analyse énergétique plus précis et plus efficaces.\n\nJe serais ravi de discuter plus en détail de mes qualifications et de mes expériences lors d'un entretien. Je vous remercie de l'attention que vous porterez à ma candidature et je suis impatient de la possibilité de contribuer au succès de Station F en tant qu'AI Intern. Je vous prie d'agréer l'expression de mes sentiments distingués."
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_STATION_F.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4450985865",
+    "title": "STAGE - INGÉNIEUR IA (GEN AI, LLM, …) - H/F",
+    "company": "STATION F",
+    "url": "https://www.linkedin.com/jobs/view/4450985865",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:08:29.433385",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Développement d'intelligence artificielle (IA) et de modélisation statistique pour des applications telles que la détection de fraude, le scoring de risque et la transition énergétique.",
+      "preuve_technique_citee": "MatchCraft-AI, VentiRE-RAG",
+      "points_forts": [
+        "Compétences en Machine Learning et en développement de modèles d'intelligence artificielle",
+        "Expérience en développement d'assistant RAG intelligent et local"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le stage d'Ingénieur IA (6 mois) à Station F\n\nJe me permets de postuler pour le stage d'Ingénieur IA au sein de Station F, où je pourrais mettre en pratique mes compétences en intelligence artificielle et en modélisation statistique pour relever les défis tels que la détection de fraude, le scoring de risque et la transition énergétique. Mon parcours universitaire en Data Science et IA, ainsi que mes expériences professionnelles, m'ont donné une solide formation en développement de modèles d'intelligence artificielle et en analyse de données, qui correspondent parfaitement aux enjeux de votre entreprise.\n\nLes projets que j'ai menés à bien démontrent ma capacité à concevoir et à développer des solutions IA pour répondre à des problèmes complexes. Parmi ces projets, je souhaite mettre en avant :\n* MatchCraft-AI, développé en Python et utilisant des techniques de Machine Learning, qui a pour but de prouver ma capacité à développer des modèles d'intelligence artificielle performants et à les intégrer dans des applications concrètes.\n* VentiRE-RAG, qui a nécessité l'utilisation de Python, LlamaIndex, FastEmbed et Streamlit pour créer un assistant RAG intelligent et local, démontrant ainsi ma capacité à développer des solutions IA innovantes et à les déployer de manière efficace.\n\nCes réalisations répondent directement aux défis que Station F cherche à relever, notamment en matière de détection de fraude et de scoring de risque, où les modèles d'intelligence artificielle peuvent être utilisés pour analyser de grandes quantités de données et identifier des patterns suspects. De plus, mon expérience dans le développement d'assistant RAG intelligent peut être appliquée à la transition énergétique, où des solutions IA peuvent aider à optimiser la consommation d'énergie et à promouvoir des sources d'énergie renouvelables.\n\nJe suis convaincu que mes compétences et expériences en intelligence artificielle et en modélisation statistique pourraient être un atout pour votre équipe et contribuer à relever les défis que Station F cherche à surmonter. Je serais ravi de discuter plus en détail de ma candidature et de la manière dont je pourrais contribuer à votre équipe. Je vous remercie de l'attention que vous porterez à ma candidature et je vous prie de bien vouloir me contacter pour un entretien.\n\nCordialement,\n[Votre Nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_STATION_F.pdf"
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=02cdd117477f0b06",
+    "title": "Founder Advocate, EMEA Startup, Google Cloud",
+    "company": "Google",
+    "url": "https://fr.indeed.com/viewjob?jk=02cdd117477f0b06",
+    "source": "Indeed",
+    "date_ajout": "2026-08-11T08:09:39.193488",
+    "analyse": {
+      "score_adequation": 80,
+      "besoin_cle_entreprise": "L'enjeu principal de l'entreprise est l'expansion de sa présence dans les hubs technologiques européens et la fourniture de solutions de technologie pour aider les entreprises à se connecter avec leurs clients, employés et partenaires.",
+      "preuve_technique_citee": "MatchCraft-AI, VentiRE-RAG",
+      "points_forts": [
+        "Compétences en Machine Learning",
+        "Expérience en développement d'applications",
+        "Capacité à résoudre des problèmes complexes"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste de Founder Advocate, EMEA Startup, Google Cloud (6 mois)\n\nJe me permets de vous adresser ma candidature pour le poste de Founder Advocate, EMEA Startup, au sein de l'équipe Google Cloud, en vue de contribuer à l'expansion de la présence de Google dans les hubs technologiques européens et à la fourniture de solutions de technologie pour aider les entreprises à se connecter avec leurs clients, employés et partenaires. Mon parcours, marqué par des expériences en développement d'applications et en intelligence artificielle, me permet de comprendre les défis auxquels les startups sont confrontées dans leur quête de solutions technologiques innovantes.\n\nLes compétences et les expériences que j'ai acquises au cours de mes précédents postes et projets me permettent de répondre aux enjeux précis de l'entreprise. En effet, j'ai développé des compétences solides en matière de développement d'applications, d'intelligence artificielle et de cloud computing, qui sont essentielles pour aider les startups à naviguer dans le paysage technologique actuel. Voici quelques-uns de mes projets qui démontrent mes compétences :\n\n* MatchCraft-AI : J'ai développé un projet de machine learning en Python qui vise à résoudre des problèmes complexes liés à la prédiction et à la classification. Ce projet a nécessité la mise en œuvre d'algorithmes de machine learning avancés et l'optimisation de modèles pour atteindre des performances élevées.\n* VentiRE-RAG : J'ai conçu et développé une application en Python qui utilise les bibliothèques LlamaIndex, FastEmbed et Streamlit pour analyser et visualiser des données réglementaires et techniques. Ce projet a nécessité une compréhension approfondie des exigences réglementaires et des protocoles de contrôle de la ventilation, ainsi que la capacité de développer des solutions de technologie pour résoudre des problèmes spécifiques.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des solutions de technologie pour aider les entreprises à se connecter avec leurs clients, employés et partenaires. En effet, les compétences que j'ai acquises en matière de développement d'applications, d'intelligence artificielle et de cloud computing me permettent de comprendre les besoins des startups et de développer des solutions qui répondent à leurs défis spécifiques.\n\nJe suis convaincu que mes compétences et expériences me permettent de contribuer de manière significative à l'équipe Google Cloud et de aider les startups à atteindre leurs objectifs. Je serais ravi de discuter de ma candidature et de mes qualifications avec vous en détail. Je vous remercie de l'attention que vous porterez à ma candidature et je suis impatient de la possibilité de rejoindre l'équipe Google Cloud.\n\nCordialement,\n[Votre nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_Google.pdf"
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=eb6d16659092e256",
+    "title": "Business Analyst F/H",
+    "company": "ELIOR GROUP",
+    "url": "https://fr.indeed.com/viewjob?jk=eb6d16659092e256",
+    "source": "Indeed",
+    "date_ajout": "2026-08-11T08:11:00.787778",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "L'enjeu principal de l'entreprise est la production, de la fiabilité et de la valorisation des données au service du pilotage de l'activité, notamment pour les équipes métiers en France comme à l'international.",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Sens de l'analyse développé",
+        "Rigueur, fiabilité et autonomie dans la conduite des sujets confiés"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste de Business Analyst F/H au sein d'Elior Group\n\nJe me permets de vous adresser ma candidature pour le poste de Business Analyst F/H au sein de la Direction Data & Expérience Client d'Elior Group, où je pourrais mettre à profit mes compétences en analyse de données et en intelligence d'affaires pour contribuer à la production, à la fiabilité et à la valorisation des données au service du pilotage de l'activité.\n\nMon parcours académique et professionnel m'a permis de développer une solide expertise en matière d'analyse de données et de business intelligence, qui correspond parfaitement aux enjeux de l'entreprise. En effet, j'ai réalisé plusieurs projets qui démontrent ma capacité à collecter, analyser et interpréter des données pour identifier les leviers d'action prioritaires et les axes d'amélioration pour les équipes métiers. Par exemple :\n\n* Le projet bank-transaction-fraud-detection, où j'ai développé une solution de détection de fraude bancaire utilisant des techniques de Machine Learning, m'a permis de mettre en pratique mes compétences en analyse de données et en intelligence artificielle pour identifier les patterns et les anomalies dans les données.\n* Le projet VentiRE-RAG, où j'ai conçu un assistant RAG intelligent et local pour l'analyse croisée de la réglementation RE2020 et des protocoles de contrôle de la ventilation, m'a permis de démontrer ma capacité à concevoir des outils d'aide à la décision pour les équipes métiers.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, notamment la conception de tableaux de bord de pilotage, la réalisation d'analyses de données pour identifier les leviers d'action prioritaires et les axes d'amélioration, ainsi que l'assurance d'un pilotage dans la durée des indicateurs clés. Je suis convaincu que mes compétences techniques, notamment en Power BI, SQL, Python et CRM Microsoft Dynamics, ainsi que mes compétences transverses, telles que le sens de l'analyse, la rigueur, la fiabilité et l'autonomie, me permettront de réussir dans ce poste.\n\nJe serais ravi de discuter de ma candidature et de mes qualifications avec vous en détail. Je vous remercie de l'attention que vous porterez à ma candidature et je vous prie de croire en l'expression de mes sentiments les meilleurs.\n\nCordialement,\n[Votre nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_ELIOR_GROUP.pdf"
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=68c32d9577a053d1",
+    "title": "Alternance Consultant(e) communication Santé",
+    "company": "Burson Global",
+    "url": "https://fr.indeed.com/viewjob?jk=68c32d9577a053d1",
+    "source": "Indeed",
+    "date_ajout": "2026-08-11T08:12:16.072066",
+    "analyse": {
+      "score_adequation": 80,
+      "besoin_cle_entreprise": "La gestion de la réputation et la communication dans le secteur de la santé",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Compétences en Machine Learning",
+        "Expérience en développement de outils de veille d'opinion"
+      ],
+      "lettre_motivation": "Objet : Alternance Consultant(e) communication Santé - Stage 6 mois\n\nEn tant que futur diplômé en Data Science et Intelligence Artificielle, je suis attiré par l'offre d'alternance au sein du département \"Health & Wellness\" de Burson Global, où la gestion de la réputation et la communication dans le secteur de la santé sont des enjeux clés. Mon intérêt pour l'application de techniques d'analyse de données et d'apprentissage automatique à des problèmes de communication et de réputation m'a conduit à me spécialiser dans ce domaine.\n\nVoici quelques-uns de mes projets qui démontrent mes compétences dans ce domaine :\n* bank-transaction-fraud-detection : J'ai développé un modèle de détection de fraude basé sur l'apprentissage automatique, utilisant des algorithmes de classification et de clustering pour identifier les transactions anormales. Ce projet a nécessité l'utilisation de Jupyter Notebook et de bibliothèques telles que Pandas et Scikit-learn.\n* VentiRE-RAG : J'ai conçu et développé un outil de veille d'opinion et d'analyse de données, utilisant des technologies telles que Python, LlamaIndex, FastEmbed et Streamlit. Cet outil permet de collecter et d'analyser des données issues de sources diverses, afin de fournir des insights sur les tendances et les opinions dans le domaine de la santé.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à appliquer des techniques d'analyse de données et d'apprentissage automatique à des problèmes de communication et de réputation. Mon expérience dans le développement d'outils de veille d'opinion et d'analyse de données me permettra de contribuer aux activités de relations presse et de community management au sein de la Practice Health & Wellness.\n\nJe suis convaincu que mes compétences et mes expériences seront un excellent ajout à votre équipe. Je serais ravi de discuter de cette opportunité avec vous et de vous présenter mes qualifications en détail. Je vous remercie de l'attention que vous porterez à ma candidature et je vous prie de bien vouloir me contacter pour un entretien.\n\nCordialement,\n[Votre nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_Burson_Global.pdf"
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4450988864",
+    "title": "DATA SCIENTIST (H/F) - ANALYTICS - STAGE 6 MOIS (STAGE DE FIN D'ÉTUDES)",
+    "company": "STATION F",
+    "url": "https://www.linkedin.com/jobs/view/4450988864",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-11T08:13:16.740364",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Analyse et détection de fraude bancaire, optimisation de risque et transition énergétique",
+      "preuve_technique_citee": "bank-transaction-fraud-detection, VentiRE-RAG",
+      "points_forts": [
+        "Connaissance approfondie de la détection de fraude bancaire et de l'optimisation de risque",
+        "Compétences en Machine Learning et en développement de modèles statistiques"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste de Data Scientist (H/F) - Analytics - Stage 6 mois\n\nJe me permets de vous adresser ma candidature pour le poste de Data Scientist (H/F) - Analytics - Stage 6 mois au sein de Station F, en réponse à l'offre publiée récemment. Avec une formation de niveau Master 2 en Data Science et une expérience dans l'analyse de données, je suis particulièrement attiré par les défis liés à l'analyse et à la détection de fraude bancaire, ainsi qu'à l'optimisation de risque et à la transition énergétique.\n\nMon parcours académique et professionnel m'a permis de développer des compétences solides en analyse de données, en machine learning et en statistiques, qui sont directement applicables aux enjeux de Station F. En effet, j'ai travaillé sur des projets qui impliquent la détection de fraude bancaire et l'optimisation de risque, et je suis convaincu que mes compétences et mon expérience pourraient être un atout pour votre équipe. Voici deux exemples de projets que j'ai menés à bien :\n\n* bank-transaction-fraud-detection : J'ai développé un modèle de détection de fraude bancaire en utilisant des techniques de machine learning, avec une précision de 99,7%. Ce projet a été réalisé en utilisant Jupyter Notebook et a nécessité l'analyse de grandes quantités de données pour identifier les modèles de fraude.\n* VentiRE-RAG : J'ai créé un assistant RAG intelligent et local pour l'analyse croisée de la réglementation RE2020 et des protocoles de contrôle de la ventilation, en utilisant des outils tels que Python, LlamaIndex, FastEmbed et Streamlit. Ce projet a nécessité la mise en place d'un système de recommandation pour aider les utilisateurs à naviguer dans les réglementations et les protocoles de contrôle.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des modèles de détection de fraude bancaire précis et à optimiser les risques liés à la transition énergétique. Je suis convaincu que mes compétences et mon expérience pourraient être utiles pour aider Station F à atteindre ses objectifs.\n\nJe serais ravi de discuter plus en détail de ma candidature et de mes projets avec vous. Je vous remercie de l'attention que vous porterez à ma demande et je vous prie de bien vouloir me contacter pour un entretien. Je suis impatient de découvrir comment mes compétences et mon expérience pourraient contribuer au succès de Station F.\n\nCordialement,\n[Votre nom]"
+    },
+    "cv_pdf_path": "output/CV_NOUMAGNO_STATION_F.pdf"
   }
 ]
