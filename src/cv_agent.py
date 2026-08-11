@@ -96,7 +96,7 @@ class PDFCV(FPDF):
         self._charger_police_unicode()
 
     def _charger_police_unicode(self):
-        """Charge DejaVuSans et toutes ses déclinaisons de style disponibles (B, I, BI)."""
+        """Charge DejaVuSans et ses déclinaisons."""
         chemins = []
         try:
             font_path = matplotlib.font_manager.findfont('DejaVu Sans')
@@ -117,11 +117,9 @@ class PDFCV(FPDF):
                 break
 
         if base_path:
-            # 1. Regular
             self.add_font("DejaVu", "", base_path)
             self.available_styles.add("")
             
-            # 2. Bold
             path_bold = base_path.replace(".ttf", "-Bold.ttf")
             if os.path.exists(path_bold):
                 self.add_font("DejaVu", "B", path_bold)
@@ -130,13 +128,11 @@ class PDFCV(FPDF):
                 self.add_font("DejaVu", "B", base_path)
                 self.available_styles.add("B")
 
-            # 3. Oblique/Italic
             path_ital = base_path.replace(".ttf", "-Oblique.ttf")
             if os.path.exists(path_ital):
                 self.add_font("DejaVu", "I", path_ital)
                 self.available_styles.add("I")
 
-            # 4. Bold Oblique/Italic
             path_bold_ital = base_path.replace(".ttf", "-BoldOblique.ttf")
             if os.path.exists(path_bold_ital):
                 self.add_font("DejaVu", "BI", path_bold_ital)
@@ -145,9 +141,7 @@ class PDFCV(FPDF):
             self.font_utf8 = True
 
     def config_font(self, style="", size=10):
-        """Définit la police en vérifiant que le style demandé existe pour éviter un crash."""
         if self.font_utf8:
-            # Si le style demandé (ex: "I") n'a pas pu être chargé, on utilise le style normal ""
             safe_style = style if style in self.available_styles else ""
             self.set_font("DejaVu", safe_style, size)
         else:
@@ -164,6 +158,7 @@ class PDFCV(FPDF):
         return "\u2022 " if self.font_utf8 else "- "
 
     def entete(self, profil_accorche: str):
+        self.set_x(10)
         self.config_font("B", 18)
         self.set_text_color(20, 40, 80)
         self.cell(0, 8, self.clean_text(CANDIDAT["nom"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
@@ -181,18 +176,20 @@ class PDFCV(FPDF):
         self.ln(2)
 
         if profil_accorche:
+            self.set_x(10)
             self.config_font("I", 9.5)
             self.set_text_color(40, 40, 40)
-            self.multi_cell(0, 4.5, self.clean_text(profil_accorche), align="C")
+            self.multi_cell(0, 4.5, self.clean_text(profil_accorche), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             self.ln(3)
 
     def section_title(self, title: str):
+        self.set_x(10)
         self.config_font("B", 11)
         self.set_text_color(20, 40, 80)
         self.cell(0, 6, self.clean_text(title.upper()), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.set_draw_color(20, 40, 80)
         self.set_line_width(0.4)
-        self.line(self.get_x(), self.get_y(), self.get_x() + 190, self.get_y())
+        self.line(10, self.get_y(), 200, self.get_y())
         self.ln(2)
 
     def ajouter_projet(self, key_projet: str):
@@ -200,24 +197,29 @@ class PDFCV(FPDF):
             return
 
         p = CATALOGUE_PROJETS[key_projet]
+        
+        self.set_x(10)
         self.config_font("B", 10)
         self.set_text_color(30, 30, 30)
-        self.multi_cell(0, 5, self.clean_text(p["titre"]))
+        self.multi_cell(0, 5, self.clean_text(p["titre"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+        self.set_x(10)
         self.config_font("I", 9)
         self.set_text_color(80, 80, 80)
-        self.multi_cell(0, 4.5, self.clean_text(p["description"]))
+        self.multi_cell(0, 4.5, self.clean_text(p["description"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
         self.config_font("", 8.5)
         self.set_text_color(50, 50, 50)
         bullet = self.get_bullet_char()
         for point in p["points"]:
-            self.multi_cell(0, 4, self.clean_text(f"{bullet}{point}"))
+            self.set_x(10)
+            self.multi_cell(0, 4, self.clean_text(f"{bullet}{point}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.ln(2)
 
     def ajouter_formations(self):
         self.section_title("Formations")
         for f in CATALOGUE_FORMATIONS:
+            self.set_x(10)
             self.config_font("B", 9.5)
             self.set_text_color(30, 30, 30)
             self.cell(140, 5, self.clean_text(f["diplome"]), new_x=XPos.RIGHT, new_y=YPos.TOP)
@@ -225,6 +227,7 @@ class PDFCV(FPDF):
             self.config_font("I", 9)
             self.cell(50, 5, self.clean_text(f["annee"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="R")
 
+            self.set_x(10)
             self.config_font("", 9)
             self.set_text_color(80, 80, 80)
             self.cell(0, 4.5, self.clean_text(f"{f['ecole']} — {f['details']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
@@ -232,10 +235,11 @@ class PDFCV(FPDF):
 
     def ajouter_competences(self, competences_cles: list):
         self.section_title("Compétences Clés")
+        self.set_x(10)
         self.config_font("", 9)
         self.set_text_color(40, 40, 40)
         comps_str = " • ".join(competences_cles)
-        self.multi_cell(0, 4.5, self.clean_text(comps_str))
+        self.multi_cell(0, 4.5, self.clean_text(comps_str), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 # ==========================================
