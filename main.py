@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 import pandas as pd
 
-from src.agent import _extraire_et_matcher, analyser_et_rediger
+from src.agent import analyser_et_rediger
 from src.company_scraper import MOTS_CLES_PAR_DEFAUT, collecter_offres_grands_groupes
 from src.cv_agent import generer_cv_pdf  # Import du module CV
 from src.github_parser import lire_profil_github
@@ -167,12 +167,14 @@ def execution_job():
             portfolio_texte=portfolio_texte,
             github_texte=github_texte
         )
-        
+
         score = analyse.get("score_adequation", 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
             # 2. Génération du CV PDF sur-mesure pour cette offre qualifiée
-            matching_info = _extraire_et_matcher(offre_dict, cv_texte, portfolio_texte, github_texte)
+            # Réutilise le matching déjà calculé dans analyser_et_rediger() —
+            # évite un second appel LLM identique (économie de quota).
+            matching_info = analyse["matching"]
             chemin_cv = generer_cv_pdf(offre_dict, analyse_matching=matching_info)
 
             resultat = {
@@ -185,7 +187,7 @@ def execution_job():
                 "analyse": analyse,
                 "cv_pdf_path": chemin_cv,  # Ajout de la référence du fichier CV généré
             }
-            
+
             historique.append(resultat)
             ids_connus.add(job_id)
             sauvegarder_historique(historique)  # Sauvegarde incrémentale de sécurité
