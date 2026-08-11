@@ -7,7 +7,17 @@ CHEMIN_HISTORIQUE = "data/historique.json"
 JOURS_RETENTION_MAX = 2
 
 
-def charger_historique(chemin: str = CHEMIN_HISTORIQUE) -> list:
+def _get_mtime(chemin: str) -> float:
+    """Retourne la date de dernière modification du fichier JSON.
+    Permet d'invalider automatiquement le cache Streamlit lorsque GitHub Actions met à jour le fichier.
+    """
+    if os.path.exists(chemin):
+        return os.path.getmtime(chemin)
+    return 0.0
+
+
+def _charger_depuis_disque(chemin: str) -> list:
+    """Lecture brute du fichier sur le disque."""
     if not os.path.exists(chemin):
         return []
     try:
@@ -18,10 +28,37 @@ def charger_historique(chemin: str = CHEMIN_HISTORIQUE) -> list:
         return []
 
 
+def charger_historique(chemin: str = CHEMIN_HISTORIQUE) -> list:
+    """Charge l'historique de manière optimisée.
+    Applique le cache Streamlit si exécuté dans une app Streamlit.
+    """
+    mtime = _get_mtime(chemin)
+
+    try:
+        import streamlit as st
+
+        @st.cache_data(ttl=300)
+        def _charger_avec_cache(path: str, file_mtime: float) -> list:
+            return _charger_depuis_disque(path)
+
+        return _charger_avec_cache(chemin, mtime)
+
+    except ImportError:
+        # Exécution hors Streamlit (Agent / Script CRON)
+        return _charger_depuis_disque(chemin)
+
+
 def sauvegarder_historique(data: list, chemin: str = CHEMIN_HISTORIQUE):
     os.makedirs(os.path.dirname(chemin), exist_ok=True)
     with open(chemin, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # Si on est dans Streamlit, on vide le cache immédiatement après modification
+    try:
+        import streamlit as st
+        st.cache_data.clear()
+    except Exception:
+        pass
 
 
 def _parser_date(date_str) -> datetime | None:
