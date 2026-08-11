@@ -9,7 +9,6 @@ résultat de `_extraire_et_matcher()` (agent.py) pour éviter un appel API redon
 import json
 import os
 import re
-from datetime import datetime
 
 from groq import Groq
 from fpdf import FPDF
@@ -18,11 +17,14 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 MODEL_LEGER = "llama-3.1-8b-instant"
 
-# Localisation des polices Unicode (nécessaires pour les accents français ET
-# les puces spéciales). Au lieu de committer des .ttf dans le repo (source de
-# problèmes Git : fichiers binaires, .gitignore, conflits de merge...), on
-# réutilise les polices DejaVu que le paquet `matplotlib` embarque déjà en
-# interne. Si matplotlib n'est pas installé, on retombe sur Helvetica (cp1252).
+NB_PROJETS_CV = 4  # nombre de projets affichés sur le CV
+
+
+# ---------------------------------------------------------------------------
+# 0. Polices Unicode (accents + puces) — réutilise les polices DejaVu que
+# `matplotlib` embarque déjà en interne, pour éviter de committer des .ttf.
+# ---------------------------------------------------------------------------
+
 def _localiser_polices_dejavu():
     try:
         import matplotlib
@@ -55,10 +57,12 @@ CANDIDAT = {
     "localisation": "Brunstatt (France)",
     "telephone": "+33 7 45 97 43 82",
     "email": "noumagnokossi0@gmail.com",
-    "linkedin": "linkedin.com/in/kossi-noumagno",
-    "github": "github.com/Dave-kossi",
-    "portfolio": "dave-kossi.github.io/kossi-NOUMAGNO",
     "disponibilite": "Mars 2027",
+    "liens": [
+        ("LinkedIn", "[https://www.linkedin.com/in/kossi-noumagno](https://www.linkedin.com/in/kossi-noumagno)"),
+        ("GitHub", "[https://github.com/Dave-kossi](https://github.com/Dave-kossi)"),
+        ("Portfolio", "[https://dave-kossi.github.io/kossi-NOUMAGNO/](https://dave-kossi.github.io/kossi-NOUMAGNO/)"),
+    ],
 }
 
 FORMATION = [
@@ -103,7 +107,7 @@ SOFT_SKILLS = [
 ]
 
 # Catalogue exhaustif des projets réalisés. Le LLM choisit et ordonne un
-# sous-ensemble (3 à 4) en fonction de l'offre — il n'invente jamais de contenu,
+# sous-ensemble (4) en fonction de l'offre — il n'invente jamais de contenu,
 # il sélectionne parmi cette liste fermée.
 PROJETS_DISPONIBLES = {
     "job_agent": {
@@ -170,16 +174,18 @@ def _appel_groq_json(prompt: str, model: str = MODEL_LEGER, temperature: float =
         max_tokens=max_tokens,
         response_format={"type": "json_object"},
     )
-    return json.loads(r.choices[0].message.content)
+    raw_text = r.choices[0].message.content
+    cleaned_text = re.sub(r"^```(?:json)?|```$", "", raw_text.strip(), flags=re.MULTILINE)
+    return json.loads(cleaned_text)
 
 
 def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) -> dict:
     """
-    Choisit 3 à 4 projets (parmi PROJETS_DISPONIBLES), l'ordre des groupes de
-    compétences, et rédige le paragraphe PROFIL — tout est adapté à l'offre,
-    mais le LLM ne fait QUE sélectionner/prioriser/reformuler du profil : les
-    projets eux-mêmes (stack, objectif, impact) restent figés dans le catalogue
-    pour éviter toute invention de faits.
+    Choisit NB_PROJETS_CV projets (parmi PROJETS_DISPONIBLES), l'ordre des
+    groupes de compétences, et rédige le paragraphe PROFIL — tout est adapté
+    à l'offre, mais le LLM ne fait QUE sélectionner/prioriser/reformuler le
+    profil : les projets eux-mêmes (stack, objectif, impact) restent figés
+    dans le catalogue pour éviter toute invention de faits.
     """
     catalogue_str = "\n".join(
         f'- ID "{cle}" : {p["nom"]} — mots-clés : {", ".join(p["mots_cles"])}'
@@ -202,7 +208,7 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
     DESCRIPTION (extrait) : {offre.get('description', '')[:2500]}
     {contexte_matching}
 
-    CATALOGUE DE PROJETS DISPONIBLES :
+    CATALOGUE DE PROJETS DISPONIBLES (5 au total) :
     {catalogue_str}
 
     GROUPES DE COMPÉTENCES DISPONIBLES (ordonne du plus au moins pertinent) :
@@ -211,21 +217,19 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
     Réponds UNIQUEMENT en JSON strict :
     {{
       "tagline": "Accroche courte (ex: Data Science - IA Générative & Agentique - Machine Learning), adaptée au vocabulaire de l'offre",
-      "profil": "Paragraphe de 3-4 phrases à la première personne, factuel, mentionnant le Master 2, les compétences clés démontrées et la disponibilité de stage",
-      "projets_ordonnes": ["id_projet_le_plus_pertinent", "id_projet_2e_plus_pertinent", "id_projet_3e_plus_pertinent"],
+      "profil": "Paragraphe court de 2 à 3 phrases maximum, concis (moins de 250 caractères), à la première personne, mentionnant le Master 2 et la disponibilité de stage.",
+      "projets_ordonnes": ["id_1", "id_2", "id_3", "id_4"],
       "groupes_competences_ordre": ["Groupe le plus pertinent", "..."]
     }}
 
-    IMPORTANT : "projets_ordonnes" doit contenir EXACTEMENT 3 identifiants (pas 2, pas 4),
-    choisis parmi les IDs du catalogue ci-dessus, du plus pertinent au moins pertinent
-    par rapport à cette offre précise. Ce CV doit tenir sur UNE seule page : ne
-    sélectionne que les 3 projets qui maximisent la pertinence, pas plus.
+    IMPORTANT : "projets_ordonnes" doit contenir EXACTEMENT {NB_PROJETS_CV} identifiants,
+    choisis parmi les 5 IDs du catalogue ci-dessus, du plus pertinent au moins pertinent
+    par rapport à cette offre précise (celui que tu exclus est le moins pertinent pour cette offre).
     """
     try:
         return _appel_groq_json(prompt)
     except Exception as e:
         print(f"⚠️ Erreur sélection contenu CV : {e}")
-        # Repli sûr : ordre par défaut, profil générique
         return {
             "tagline": "Data Science • IA Générative & Agentique • Machine Learning",
             "profil": (
@@ -234,7 +238,7 @@ def _selectionner_contenu_cv(offre: dict, analyse_matching: dict | None = None) 
                 "et IA Générative/Agentique en Python, de l'exploration des données jusqu'au "
                 f"déploiement. Je recherche un stage de fin d'études à partir de {CANDIDAT['disponibilite']}."
             ),
-            "projets_ordonnes": ["job_agent", "ventire", "fraude"],
+            "projets_ordonnes": ["job_agent", "ventire", "fraude", "rte"],
             "groupes_competences_ordre": list(COMPETENCES_DISPONIBLES.keys()),
         }
 
@@ -259,13 +263,13 @@ class CVPdf(FPDF):
             self.base_font = "helvetica"
             self.puce = "•"
             self.core_fonts_encoding = "cp1252"
-            
-        # Marges réduites pour maximiser la hauteur utilisable
-        self.set_margins(12, 8, 12)
-        self.set_auto_page_break(auto=False)  # Désactive le saut de page automatique
 
-    def _font(self, style="", size=8, color=DARKGRAY):
-        self.set_font(self.base_font, style, size)
+        self.set_margins(12, 8, 12)
+        self.set_auto_page_break(auto=True, margin=6)
+
+    def _font(self, style="", size=8.5, color=DARKGRAY, underline=False):
+        style_final = style + ("U" if underline else "")
+        self.set_font(self.base_font, style_final, size)
         self.set_text_color(*color)
 
     def _safe(self, text: str) -> str:
@@ -299,91 +303,101 @@ class CVPdf(FPDF):
             args[1] = self._safe(args[1])
         return super().write(*args, **kwargs)
 
+    # -- Blocs de mise en page --------------------------------------------
+
     def entete(self, tagline: str):
-        self._font("B", 16, FOREST)
-        self.cell(0, 6, CANDIDAT["nom"], new_x="LMARGIN", new_y="NEXT")
-        self._font("B", 8.5, COPPER)
+        self._font("B", 18, FOREST)
+        self.cell(0, 6.5, CANDIDAT["nom"], new_x="LMARGIN", new_y="NEXT")
+
+        self._font("B", 9, COPPER)
         stage_line = f"Recherche d'un stage de fin d'études (min 6 mois) — {CANDIDAT['disponibilite']}  |  {tagline}"
-        self.multi_cell(0, 3.8, stage_line, new_x="LMARGIN", new_y="NEXT")
-        self._font("", 8, DARKGRAY)
-        self.cell(0, 3.5, f"{CANDIDAT['localisation']}  |  {CANDIDAT['telephone']}  |  {CANDIDAT['email']}", new_x="LMARGIN", new_y="NEXT")
-        self._font("", 8, COPPER)
-        self.cell(0, 3.5, f"{CANDIDAT['linkedin']}   |   {CANDIDAT['github']}   |   {CANDIDAT['portfolio']}", new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 4, stage_line, new_x="LMARGIN", new_y="NEXT")
+
+        self._font("", 8.5, DARKGRAY)
+        self.cell(0, 3.8, f"{CANDIDAT['localisation']}  |  {CANDIDAT['telephone']}  |  {CANDIDAT['email']}", new_x="LMARGIN", new_y="NEXT")
+
+        # Ligne de liens cliquables (LinkedIn | GitHub | Portfolio)
+        for i, (label, url) in enumerate(CANDIDAT["liens"]):
+            if i > 0:
+                self._font("", 8.5, DARKGRAY)
+                self.write(3.8, "   |   ")
+            self._font("", 8.5, COPPER, underline=True)
+            self.write(3.8, label, link=url)
+        self.ln(4.5)
+
         self.set_draw_color(*FOREST)
         self.set_line_width(0.4)
-        self.ln(1)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(1.5)
+        self.ln(1.8)
 
     def section(self, titre: str):
-        self._font("B", 8.5, FOREST)
-        self.cell(0, 4, titre.upper(), new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 9, FOREST)
+        self.cell(0, 4.5, titre.upper(), new_x="LMARGIN", new_y="NEXT")
         self.set_draw_color(*FOREST)
         self.set_line_width(0.2)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
-        self.ln(1)
+        self.ln(1.0)
 
     def paragraphe(self, texte: str):
-        self._font("", 7.8, DARKGRAY)
-        self.multi_cell(0, 3.2, texte, new_x="LMARGIN", new_y="NEXT")
-        self.ln(1)
+        self._font("", 8.2, DARKGRAY)
+        self.multi_cell(0, 3.5, texte, new_x="LMARGIN", new_y="NEXT")
+        self.ln(0.5)
 
     def projet(self, p: dict):
-        self._font("B", 8, COPPER)
-        self.write(3.2, f"{self.puce} ")
-        self._font("B", 8, FOREST)
-        self.write(3.2, p["nom"])
-        self._font("I", 7.5, MIDGRAY)
-        self.write(3.2, f"   —   {p['tag']}")
-        self.ln(3.5)
-        self._font("I", 7.2, MIDGRAY)
-        self.multi_cell(0, 3, p["stack"], new_x="LMARGIN", new_y="NEXT")
-        self._font("B", 7.5, DARKGRAY)
-        self.write(3, "Objectif : ")
-        self._font("", 7.5, DARKGRAY)
-        self.write(3, p["objectif"])
-        self.ln(3.2)
-        self._font("B", 7.5, DARKGRAY)
-        self.write(3, "Impact : ")
-        self._font("", 7.5, DARKGRAY)
-        self.write(3, p["impact"])
-        self.ln(3.5)
+        self._font("B", 8.5, COPPER)
+        self.write(3.6, f"{self.puce} ")
+        self._font("B", 8.5, FOREST)
+        self.write(3.6, p["nom"])
+        self._font("I", 7.8, MIDGRAY)
+        self.write(3.6, f"  —  {p['tag']}")
+        self.ln(3.6)
+        self._font("I", 7.4, MIDGRAY)
+        self.multi_cell(0, 3.1, p["stack"], new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 7.8, DARKGRAY)
+        self.write(3.2, "Objectif : ")
+        self._font("", 7.8, DARKGRAY)
+        self.write(3.2, p["objectif"])
+        self.ln(3.4)
+        self._font("B", 7.8, DARKGRAY)
+        self.write(3.2, "Impact : ")
+        self._font("", 7.8, DARKGRAY)
+        self.write(3.2, p["impact"])
+        self.ln(3.8)
 
     def ligne_bullet(self, gras: str, texte: str = ""):
-        self._font("B", 7.8, COPPER)
-        self.write(3.2, f"{self.puce} ")
+        self._font("B", 8.2, COPPER)
+        self.write(3.4, f"{self.puce} ")
         if texte:
-            self._font("B", 7.8, DARKGRAY)
-            self.write(3.2, f"{gras} : ")
-            self._font("", 7.8, DARKGRAY)
-            self.write(3.2, texte)
+            self._font("B", 8.2, DARKGRAY)
+            self.write(3.4, f"{gras} : ")
+            self._font("", 8.2, DARKGRAY)
+            self.write(3.4, texte)
         else:
-            self._font("", 7.8, DARKGRAY)
-            self.write(3.2, gras)
-        self.ln(3.2)
+            self._font("", 8.2, DARKGRAY)
+            self.write(3.4, gras)
+        self.ln(3.5)
 
     def experience_bloc(self, exp: dict):
-        self._font("B", 8, FOREST)
-        self.write(3.2, exp["titre"])
-        self._font("I", 7.5, MIDGRAY)
-        self.write(3.2, f"   —   {exp['structure']}")
-        self.ln(3.2)
-        self._font("I", 7, MIDGRAY)
-        self.cell(0, 3, exp["periode"], new_x="LMARGIN", new_y="NEXT")
+        self._font("B", 8.4, FOREST)
+        self.write(3.5, exp["titre"])
+        self._font("I", 7.8, MIDGRAY)
+        self.write(3.5, f"  —  {exp['structure']}")
+        self.ln(3.5)
+        self._font("I", 7.4, MIDGRAY)
+        self.cell(0, 3.1, exp["periode"], new_x="LMARGIN", new_y="NEXT")
         for b in exp["bullets"]:
-            self._font("", 7.5, DARKGRAY)
-            self.set_x(self.l_margin + 3)
-            self.multi_cell(0, 3, f"{self.puce} {b}", new_x="LMARGIN", new_y="NEXT")
-        self.ln(1)
+            self._font("", 7.8, DARKGRAY)
+            self.set_x(self.l_margin + 3.0)
+            self.multi_cell(0, 3.2, f"{self.puce} {b}", new_x="LMARGIN", new_y="NEXT")
+        self.ln(0.4)
 
 
 def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_sortie: str = "output") -> str:
     """Point d'entrée principal : construit le PDF adapté et retourne le chemin du fichier."""
     contenu = _selectionner_contenu_cv(offre, analyse_matching)
 
-    NB_PROJETS_CV = 3
     ids_projets = [i for i in contenu.get("projets_ordonnes", []) if i in PROJETS_DISPONIBLES]
-    ids_projets = list(dict.fromkeys(ids_projets))
+    ids_projets = list(dict.fromkeys(ids_projets))  # dédoublonne en gardant l'ordre
     if len(ids_projets) < NB_PROJETS_CV:
         for cle in PROJETS_DISPONIBLES:
             if cle not in ids_projets:
@@ -410,12 +424,10 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     pdf.section("Compétences techniques")
     for g in groupes:
         pdf.ligne_bullet(g, COMPETENCES_DISPONIBLES[g])
-    pdf.ln(1)
 
     pdf.section("Soft skills")
     for s in SOFT_SKILLS:
         pdf.ligne_bullet(s)
-    pdf.ln(1)
 
     pdf.section("Expérience & Leadership")
     for exp in EXPERIENCES:
@@ -424,7 +436,6 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     pdf.section("Formation")
     for f in FORMATION:
         pdf.ligne_bullet(f)
-    pdf.ln(1)
 
     pdf.section("Certifications & Langues")
     for c in CERTIFICATIONS:
@@ -435,8 +446,9 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
     nom_fichier = re.sub(r"[^\w\-]+", "_", offre.get("company", "entreprise")).strip("_")
     chemin = os.path.join(dossier_sortie, f"CV_NOUMAGNO_{nom_fichier}.pdf")
     pdf.output(chemin)
-    print(f"✅ CV adapté généré (1 page A4) : {chemin}")
+    print(f"✅ CV adapté généré ({pdf.page_no()} page(s) A4) : {chemin}")
     return chemin
+
 
 # ---------------------------------------------------------------------------
 # 4. Intégration avec le pipeline existant (agent.py)
@@ -444,9 +456,9 @@ def generer_cv_pdf(offre: dict, analyse_matching: dict | None = None, dossier_so
 
 def generer_candidature_complete(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
     """
-    Exemple d'intégration : réutilise agent.py pour la lettre, et cv_agent.py
-    pour le CV, en partageant le même résultat de matching entre les deux
-    pour ne payer l'appel d'extraction qu'une seule fois.
+    Réutilise agent.py pour la lettre, et cv_agent.py pour le CV, en partageant
+    le même résultat de matching entre les deux pour ne payer l'appel
+    d'extraction qu'une seule fois.
     """
     from agent import _extraire_et_matcher, analyser_et_rediger  # import local pour éviter la dépendance circulaire
 
@@ -461,7 +473,6 @@ def generer_candidature_complete(offre: dict, cv_texte: str, portfolio_texte: st
 
 
 if __name__ == "__main__":
-    # Test rapide sans appel réseau (mode hors-ligne / démonstration)
     offre_test = {
         "title": "Stagiaire Data Scientist – IA Générative & Agentique",
         "company": "Parfums Christian Dior",
