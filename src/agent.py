@@ -1,46 +1,37 @@
 # src/agent.py
 import json
-import time
-import os
-from groq import Groq
+import re
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-MODEL_REDACTION = "llama-3.3-70b-versatile"
-MODEL_LEGER = "llama-3.1-8b-instant"
+# Import des fonctions d'appel sécurisées avec fallback (Groq + OpenRouter)
+from src.llm_providers import appel_json, _appeler_avec_repli
 
 SCORE_REGENERATION_SEUIL = 7
-MAX_RETRIES_API = 2
 
 
-def _appel_groq(messages: list, model: str, temperature: float, max_tokens: int, json_mode: bool = True):
-    """Centralise l'appel à l'API Groq avec gestion des erreurs et retries."""
-    kwargs = {
-        "messages": messages,
-        "model": model,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    if json_mode:
-        kwargs["response_format"] = {"type": "json_object"}
-
-    derniere_erreur = None
-    for tentative in range(1, MAX_RETRIES_API + 1):
-        try:
-            return client.chat.completions.create(**kwargs)
-        except Exception as e:
-            derniere_erreur = e
-            print(f"⚠️ Erreur Groq (tentative {tentative}/{MAX_RETRIES_API}) : {e}")
-            if tentative < MAX_RETRIES_API:
-                time.sleep(2 * tentative)
-
-    raise derniere_erreur
+def _nettoyer_et_charger_json(texte_brut: str) -> dict:
+    """Nettoie le texte renvoyé par le LLM pour garantir un parsing JSON valide."""
+    if not texte_brut:
+        return {}
+    
+    # Suppression des blocs Markdown ```json ... ```
+    texte_propre = re.sub(r"^```(?:json)?|```$", "", texte_brut.strip(), flags=re.MULTILINE)
+    try:
+        return json.loads(texte_propre)
+    except json.JSONDecodeError:
+        # Tente de trouver le premier '{' et le dernier '}'
+        match = re.search(r"\{.*\}", texte_propre, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
+        return {}
 
 
 def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
     """
-    Étape 1 & 2 : Analyse dynamiquement l'offre et sélectionne
-    les projets/compétences les plus pertinents dans le dossier du candidat.
+    Étape 1 & 2 : Analyse l'offre et sélectionne
+    les projets/compétences les plus pertinents.
     """
     prompt = f"""
     Tu es un Expert Recruteur et Data Scientist.
@@ -81,14 +72,11 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
       "points_forts": ["Point fort 1", "Point fort 2"]
     }}
     """
+    messages = [{"role": "user", "content": prompt}]
+    
     try:
-        r = _appel_groq(
-            messages=[{"role": "user", "content": prompt}],
-            model=MODEL_LEGER,
-            temperature=0.2,
-            max_tokens=800,
-        )
-        return json.loads(r.choices[0].message.content)
+        # Utilisation du module multi-fournisseurs (modèle léger)
+        return appel_json(messages=messages, taille="leger", temperature=0.2, max_tokens=800)
     except Exception as e:
         print(f"⚠️ Erreur extraction & matching : {e}")
         return {
@@ -102,8 +90,7 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
 
 def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, retour_critique: str = None) -> str:
     """
-    Étape 3 : Rédige la lettre de motivation sur mesure en intégrant
-    dynamiquement les projets et le vocabulaire identifiés lors du matching.
+    Étape 3 : Rédige la lettre de motivation sur mesure.
     """
     projets_str = ""
     for p in analyse_matching.get("projets_selectionnes", []):
@@ -134,7 +121,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
     """
 
     if retour_critique:
-        system_prompt += f"\n\n⚠️ REVISION REQUISE : La version précédente comporte des faiblesses. Corrige impérativement : {retour_critique}"
+        system_prompt += f"\n\n⚠️ REVISION REQUISE : Corrige impérativement : {retour_critique}"
 
     user_prompt = f"""
     DESCRIPTION COMPLETE DE L'OFFRE :
@@ -143,21 +130,24 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
     Rédige la lettre complète en texte pur.
     """
 
-    r = _appel_groq(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        model=MODEL_REDACTION,
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    # Utilisation du module multi-fournisseurs (modèle rédaction)
+    contenu = _appeler_avec_repli(
+        messages=messages,
+        taille="redaction",
         temperature=0.3,
         max_tokens=2500,
         json_mode=False
     )
-    return r.choices[0].message.content.strip()
+    return contenu.strip() if contenu else ""
 
 
 def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict) -> dict:
-    """Étape 4 : Vérification de la lettre (absence de phrases creuses et adaptation à l'offre)."""
+    """Étape 4 : Vérification de la lettre."""
     if not lettre:
         return {"score": 0, "justification": "Lettre vide."}
 
@@ -179,14 +169,10 @@ def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict) -> dict:
       "justification": "Explication courte si la note est inférieure à 8"
     }}
     """
+    messages = [{"role": "user", "content": prompt}]
+    
     try:
-        r = _appel_groq(
-            messages=[{"role": "user", "content": prompt}],
-            model=MODEL_LEGER,
-            temperature=0,
-            max_tokens=200,
-        )
-        res = json.loads(r.choices[0].message.content)
+        res = appel_json(messages=messages, taille="leger", temperature=0.0, max_tokens=200)
         return {"score": int(res.get("score", 10)), "justification": str(res.get("justification", ""))}
     except Exception as e:
         print(f"⚠️ Erreur critique lettre : {e}")
@@ -198,10 +184,10 @@ def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github
     try:
         print(f"🔍 Analyse et matching pour l'offre : {offre.get('title')} chez {offre.get('company')}...")
         
-        # 1. Matching intelligent entre l'offre et le profil
+        # 1. Matching intelligent
         matching = _extraire_et_matcher(offre, cv_texte, portfolio_texte, github_texte)
 
-        # 2. Rédaction adaptée
+        # 2. Rédaction
         lettre = _rediger_lettre_adaptee(offre, cv_texte, matching)
 
         # 3. Contrôle qualité / Critique
@@ -213,7 +199,7 @@ def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github
                 offre, cv_texte, matching, retour_critique=critique["justification"]
             )
 
-        nb_mots = len(lettre.split())
+        nb_mots = len(lettre.split()) if lettre else 0
         print(f"✅ Lettre adaptée générée ({nb_mots} mots).")
 
         return {
