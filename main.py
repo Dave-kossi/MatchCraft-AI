@@ -4,6 +4,7 @@ import random
 import re
 import time
 from datetime import datetime
+from pathlib import Path
 import pandas as pd
 
 from src.agent import analyser_et_rediger
@@ -28,6 +29,64 @@ SEUIL_SCORE_MIN = 70
 CHEMIN_CV = "data/cv.pdf"
 CHEMIN_PORTFOLIO = "data/portfolio.html"
 CHEMIN_REJETS = "data/offres_rejetees.json"
+DOSSIER_CV_GENERES = "data/cv_generes"
+
+# Durée de rétention des fichiers temporaires (en jours)
+JOURS_RETENTION_STORAGE = 2
+
+# ==========================================
+# PURGE DE STOCKAGE (FICHIERS OBSOLÈTES)
+# ==========================================
+def purger_fichiers_obsoletes(dossiers: list[str], jours: int = JOURS_RETENTION_STORAGE):
+    """
+    Supprime tous les fichiers temporaires/générés (.pdf, .json, .txt) 
+    qui datent de plus de X jours pour libérer l'espace disque.
+    """
+    limite = time.time() - (jours * 86400)
+    extensions_ciblees = {".pdf", ".json", ".txt"}
+    
+    # Fichiers sources critiques à ne JAMAIS supprimer
+    fichiers_proteges = {
+        os.path.abspath(CHEMIN_CV),
+        os.path.abspath(CHEMIN_PORTFOLIO),
+        os.path.abspath(CHEMIN_REJETS),
+    }
+
+    fichiers_supprimes = 0
+    espace_libere = 0
+
+    print(f"🧹 [Storage] Recherche des fichiers obsolètes (> {jours} jours)...")
+
+    for d in dossiers:
+        path_dossier = Path(d)
+        if not path_dossier.exists():
+            continue
+
+        for fichier in path_dossier.rglob("*"):
+            if fichier.is_file() and fichier.suffix.lower() in extensions_ciblees:
+                filepath_abs = os.path.abspath(str(fichier))
+                
+                # Ignorer les fichiers protégés
+                if filepath_abs in fichiers_proteges:
+                    continue
+
+                # Vérification de l'âge du fichier
+                if fichier.stat().st_mtime < limite:
+                    try:
+                        taille = fichier.stat().st_size
+                        fichier.unlink()
+                        fichiers_supprimes += 1
+                        espace_libere += taille
+                        print(f"   🗑️ Supprimé : {fichier.name}")
+                    except Exception as e:
+                        print(f"   ⚠️ Impossible de supprimer {fichier.name} : {e}")
+
+    mb_liberes = espace_libere / (1024 * 1024)
+    if fichiers_supprimes > 0:
+        print(f"✅ [Storage] Purge terminée : {fichiers_supprimes} fichier(s) nettoyé(s) ({mb_liberes:.2f} Mo libérés).\n")
+    else:
+        print("✅ [Storage] Aucun fichier obsolète à supprimer.\n")
+
 
 # ==========================================
 # FILTRES : STAGE OU ALTERNANCE (DATA / IA)
@@ -122,6 +181,12 @@ def tout_rassembler() -> pd.DataFrame:
 def execution_job():
     print(f"\n🚀 [MatchCraft AI] Démarrage de l'agent pour {GITHUB_USERNAME}...")
 
+    # 0. Nettoyage préventif des anciens fichiers générés (> 2 jours)
+    purger_fichiers_obsoletes(dossiers=[DOSSIER_CV_GENERES, "data", "exports", "."])
+
+    # S'assurer que le dossier de sortie existe
+    os.makedirs(DOSSIER_CV_GENERES, exist_ok=True)
+
     # Chargement des données candidat
     cv_texte = lire_cv_pdf(CHEMIN_CV) if os.path.exists(CHEMIN_CV) else ""
     portfolio_texte = lire_portfolio_html(CHEMIN_PORTFOLIO) if os.path.exists(CHEMIN_PORTFOLIO) else ""
@@ -171,11 +236,14 @@ def execution_job():
         score = analyse.get("score_adequation", 0) if analyse else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
+            # Nom de fichier propre et horodaté dans data/cv_generes/
+            entreprise_slug = re.sub(r'[^a-zA-Z0-9]', '_', entreprise)
+            nom_pdf = f"CV_Kossi_NOUMAGNO_{entreprise_slug}_{datetime.now().strftime('%Y%m%m')}.pdf"
+            chemin_cv_sortie = os.path.join(DOSSIER_CV_GENERES, nom_pdf)
+
             # 2. Génération du CV PDF sur-mesure pour cette offre qualifiée
-            # Réutilise le matching déjà calculé dans analyser_et_rediger() —
-            # évite un second appel LLM identique (économie de quota).
-            matching_info = analyse["matching"]
-            chemin_cv = generer_cv_pdf(offre_dict, analyse_matching=matching_info)
+            matching_info = analyse.get("matching", {})
+            chemin_cv = generer_cv_pdf(offre_dict, analyse_matching=matching_info, output_path=chemin_cv_sortie)
 
             resultat = {
                 "id": job_id,
@@ -185,17 +253,17 @@ def execution_job():
                 "source": source_plateforme,
                 "date_ajout": datetime.now().isoformat(),
                 "analyse": analyse,
-                "cv_pdf_path": chemin_cv,  # Ajout de la référence du fichier CV généré
+                "cv_pdf_path": chemin_cv,  # Référence du fichier CV généré
             }
 
             historique.append(resultat)
             ids_connus.add(job_id)
-            sauvegarder_historique(historique)  # Sauvegarde incrémentale de sécurité
-            print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%) — CV PDF : {chemin_cv}")
+            sauvegarder_historique(historique)  # Sauvegarde incrémentale
+            print(f"    └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%) — CV PDF : {chemin_cv}")
         else:
             ids_rejetes.add(job_id)
             sauvegarder_ids_rejetes(ids_rejetes)  # Sauvegarde incrémentale
-            print(f"   └─ ❌ ÉCARTÉE (Score MatchCraft : {score}%)")
+            print(f"    └─ ❌ ÉCARTÉE (Score MatchCraft : {score}%)")
 
         time.sleep(random.uniform(1, 2))
 
