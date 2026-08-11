@@ -25,6 +25,7 @@ jobs:
       - name: Exécuter l'Agent
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python main.py
@@ -33,14 +34,10 @@ jobs:
           git config --global user.name 'MatchCraft-AI-Bot'
           git config --global user.email 'bot@github.com'
 
-          # 1. On indexe les données ET les fichiers générés (CV/lettres)
-          git add data/ output/
+          # data/ contient maintenant tout : historique.json, offres_rejetees.json,
+          # et les CV PDF générés dans data/cvs/
+          git add data/
 
-          # 2. On valide les changements localement s'il y en a
           git commit -m "Auto-update des offres [skip ci]" || exit 0
-
-          # 3. On réaligne avec la branche distante APRÈS le commit (arbre de travail propre)
           git pull --rebase origin main
-
-          # 4. On pousse le commit
           git push
