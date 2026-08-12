@@ -1,20 +1,7 @@
-# IA & Modèles LLM (Groq & OpenRouter via API OpenAI compatible)
-openai>=1.12.0
-
-# Interface Web & Dashboard
-streamlit>=1.35.0
-
-# Traitement de données & Automatisation
-pandas>=2.0.0
-python-dotenv>=1.0.0
-
-# Scraping & Recherche d'offres
-python-jobspy>=1.1.0
-requests>=2.31.0
-urllib3>=2.0.0
-
-# Génération de documents & Parsing (PDF / HTML)
-fpdf2>=2.7.0
-pypdf>=4.0.0
-beautifulsoup4>=4.12.0
-matplotlib>=3.8.0
+streamlit
+groq
+requests
+pandas
+beautifulsoup4
+pypdf
+python-jobspy
