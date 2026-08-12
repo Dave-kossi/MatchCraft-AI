@@ -1,271 +1,82 @@
+# app.py
+import json
 import os
-import base64
 import streamlit as st
 
-from src.historique import (
-    JOURS_RETENTION_MAX,
-    charger_historique,
-    formater_date_affichage,
-    sauvegarder_historique,
-    separer_recentes_obsoletes,
-)
+from src.github_writer import sauvegarder_historique_sur_github
 
-# ==========================================
-# CONFIGURATION DE LA PAGE
-# ==========================================
+CHEMIN_HISTORIQUE = "data/historique.json"
+
 st.set_page_config(
-    page_title="MatchCraft AI",
-    page_icon="💼",
+    page_title="MatchCraft AI Dashboard",
+    page_icon="🤖",
     layout="wide"
 )
 
-# ==========================================
-# CHARGEMENT AVEC TTL DYNAMIQUE (1 HEURE)
-# ==========================================
-# ttl=3600 permet de relire le JSON sur le disque toutes les heures, 
-# parfait pour capter vos 4 exécutions quotidiennes du Cron sans rechargement manuel.
-@st.cache_data(ttl=3600)
-def obtenir_historique_cache():
-    try:
-        return charger_historique()
-    except Exception as e:
-        st.error(f"Erreur lors du chargement de l'historique : {e}")
-        return []
+st.title("🤖 Dashboard de Candidature - MatchCraft AI")
+st.markdown("Consultez les offres analysées et retenues par votre agent IA.")
 
-# Helper pour intégrer et afficher le PDF directement dans Streamlit
-def afficher_pdf_embed(chemin_pdf: str):
-    if chemin_pdf and os.path.exists(chemin_pdf):
-        try:
-            with open(chemin_pdf, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="500" type="application/pdf"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Impossible de lire le fichier PDF : {e}")
-    else:
-        st.warning("Le fichier PDF est introuvable sur le serveur.")
 
-# ==========================================
-# BARRE LATÉRALE & CONTRÔLES DU CACHE
-# ==========================================
-with st.sidebar:
-    st.header("⚙️ Contrôles")
-    st.caption("Synchronisation avec le dépôt")
-    if st.button("🔄 Rafraîchir les données", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+@st.cache_data(ttl=60)
+def charger_offres():
+    if os.path.exists(CHEMIN_HISTORIQUE):
+        with open(CHEMIN_HISTORIQUE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
-# ==========================================
-# CHARGEMENT ET FILTRES D'AFFICHAGE
-# ==========================================
-offres_brutes = obtenir_historique_cache()
 
-st.title("💼 MatchCraft AI — Tableau de bord")
-st.markdown("Explore et gère tes opportunités qualifiées par l'IA (stages & alternances Data Science, Analytics, ML, LLM, AI Engineering).")
+offres = charger_offres()
 
-# --- RECHERCHE, SOURCE ET TRI ---
-with st.container():
-    col_search, col_source, col_sort = st.columns([2, 1, 1])
+# On ne montre que les offres pas encore marquées comme "postulée"
+offres_actives = [o for o in offres if o.get('statut', 'nouvelle') != 'postulee']
 
-    search_query = col_search.text_input(
-        "🔍 Rechercher (Entreprise, Titre, Compétence...)",
-        placeholder="Ex: Enedis, AXA, Python, NLP..."
-    )
+if not offres_actives:
+    st.info("Aucune offre active pour le moment. L'agent continue de tourner...")
+else:
+    col_search, col_score = st.columns([2, 1])
+    with col_search:
+        recherche = st.text_input("🔍 Rechercher une entreprise ou un poste...")
+    with col_score:
+        score_min = st.slider("Score d'adéquation minimum (%)", 0, 100, 70)
 
-    sources = ["Toutes"] + sorted({o.get("source", "Inconnue") for o in offres_brutes if isinstance(o, dict)})
-    selected_source = col_source.selectbox("🌐 Provenance", sources)
-
-    sort_option = col_sort.selectbox(
-        "🔀 Trier par",
-        ["Plus récents d'abord", "Plus anciens d'abord", "Meilleur score IA"]
-    )
-
-# --- FILTRAGE DES DONNÉES ---
-offres_filtrees = list(offres_brutes)
-
-if search_query:
-    q = search_query.lower()
     offres_filtrees = [
-        o for o in offres_filtrees
-        if q in o.get("title", "").lower()
-        or q in o.get("company", "").lower()
-        or q in str(o.get("analyse", {})).lower()
+        o for o in offres_actives
+        if o.get('analyse', {}).get('score_adequation', 0) >= score_min
+        and (recherche.lower() in o.get('title', '').lower() or recherche.lower() in o.get('company', '').lower())
     ]
 
-if selected_source != "Toutes":
-    offres_filtrees = [o for o in offres_filtrees if o.get("source", "Inconnue") == selected_source]
+    st.write(f"### 📋 {len(offres_filtrees)} offre(s) qualifiée(s) trouvée(s)")
 
-if sort_option == "Plus récents d'abord":
-    offres_filtrees.sort(key=lambda x: x.get("date_ajout", ""), reverse=True)
-elif sort_option == "Plus anciens d'abord":
-    offres_filtrees.sort(key=lambda x: x.get("date_ajout", ""), reverse=False)
-elif sort_option == "Meilleur score IA":
-    offres_filtrees.sort(key=lambda x: x.get("analyse", {}).get("score_adequation", 0), reverse=True)
+    for item in offres_filtrees:
+        analyse = item.get('analyse', {})
+        score = analyse.get('score_adequation', 0)
+        badge_color = "🟢" if score >= 80 else "🟡"
 
-st.divider()
+        with st.expander(f"{badge_color} **{item.get('title')}** chez **{item.get('company')}** — Match: **{score}%**"):
+            col1, col2 = st.columns([1, 1])
 
-# ==========================================
-# STRUCTURE EN ONGLETS
-# ==========================================
-tab_offres, tab_sources, tab_gestion = st.tabs([
-    f"Offres Qualifiées ({len(offres_filtrees)})",
-    "Provenance & Stats",
-    "⚙️ Gestion & Purge"
-])
+            with col1:
+                st.write("**🎯 Besoin clé détecté :**", analyse.get('besoin_cle_entreprise', 'N/A'))
+                st.write("**📌 Preuve technique retenue :**", analyse.get('preuve_technique_citee', 'N/A'))
+                st.write("**💪 Points forts :**", ", ".join(analyse.get('points_forts', [])))
+                st.link_button("🚀 Voir l'offre & Postuler", item.get('url'))
 
-# ------------------------------------------
-# ONGLET 1 : OFFRES ET FICHES
-# ------------------------------------------
-with tab_offres:
-    if not offres_filtrees:
-        st.info("Aucune offre ne correspond à tes critères actuels.")
-    else:
-        for idx, item in enumerate(offres_filtrees):
-            analyse = item.get("analyse", {})
-            score = analyse.get("score_adequation", 0)
-            source = item.get("source", "Source inconnue")
-            date_affichee = formater_date_affichage(item.get("date_ajout"))
-            cv_pdf_path = item.get("cv_pdf_path")
-
-            badge_score = "🟢" if score >= 80 else "🟠"
-            item_id = item.get("id")
-
-            with st.expander(f"{badge_score} **{item.get('title')}** — {item.get('company')} | {score}% Match ({source})"):
-                c1, c2, c3 = st.columns(3)
-                c1.caption(f"📅 Ajoutée le : **{date_affichee}**")
-                c2.caption(f"🌐 Source : **{source}**")
-                c3.markdown(f"🔗 [Ouvrir l'offre sur le site]({item.get('url')})")
-
-                st.markdown("---")
-
-                col_b1, col_b2 = st.columns(2)
-                with col_b1:
-                    st.markdown("**Besoin clé :**")
-                    st.write(analyse.get("besoin_cle_entreprise", "Non précisé"))
-                    st.markdown("**Preuve technique :**")
-                    st.write(analyse.get("preuve_technique_citee", "Non précisée"))
-
-                with col_b2:
-                    st.markdown("**💪 Points forts :**")
-                    pts = analyse.get("points_forts", [])
-                    if isinstance(pts, list):
-                        for p in pts:
-                            st.write(f"- {p}")
+                if st.button("✅ Marquer comme postulée", key=f"postule_{item.get('id')}"):
+                    for o in offres:
+                        if o.get('id') == item.get('id'):
+                            o['statut'] = 'postulee'
+                    if sauvegarder_historique_sur_github(offres):
+                        st.cache_data.clear()
+                        st.success("Offre marquée comme postulée ✅")
+                        st.rerun()
                     else:
-                        st.write(pts)
+                        st.error("⚠️ Échec de la sauvegarde sur GitHub — vérifie le secret GITHUB_TOKEN.")
 
-                st.markdown("---")
-
-                # --- ACTIONS CV & LETTRE ---
-                col_act_cv, col_act_lettre = st.columns([1, 2])
-
-                with col_act_cv:
-                    st.markdown("### 📄 CV Optimisé")
-                    if cv_pdf_path and os.path.exists(cv_pdf_path):
-                        with open(cv_pdf_path, "rb") as pdf_file:
-                            st.download_button(
-                                label="📥 Télécharger le CV (PDF)",
-                                data=pdf_file,
-                                file_name=os.path.basename(cv_pdf_path),
-                                mime="application/pdf",
-                                key=f"dl_cv_{item_id}_{idx}",
-                                use_container_width=True
-                            )
-                        with st.popover("👁️ Aperçu du CV"):
-                            afficher_pdf_embed(cv_pdf_path)
-                    else:
-                        st.caption("⚠️ Aucun fichier CV trouvé sur le serveur pour cette offre.")
-
-                with col_act_lettre:
-                    st.markdown("### ✉️ Lettre de motivation")
-                    lettre_texte = analyse.get("lettre_motivation", "Lettre non disponible.")
-                    st.info(lettre_texte)
-
-                st.markdown("---")
-
-                # --- SUPPRESSION INDIVIDUELLE ---
-                if item_id and st.button("🗑️ Supprimer cette offre", key=f"del_{item_id}_{idx}"):
-                    if cv_pdf_path and os.path.exists(cv_pdf_path):
-                        try:
-                            os.remove(cv_pdf_path)
-                        except Exception as e:
-                            st.warning(f"Impossible de supprimer le fichier PDF : {e}")
-
-                    nouvelles_offres = [o for o in offres_brutes if o.get('id') != item_id]
-                    sauvegarder_historique(nouvelles_offres)
-                    st.cache_data.clear()
-                    st.success("Offre retirée de la base de données.")
-                    st.rerun()
-                elif not item_id:
-                    st.caption("⚠️ Entrée sans identifiant valide.")
-
-# ------------------------------------------
-# ONGLET 2 : STATISTIQUES
-# ------------------------------------------
-with tab_sources:
-    st.header("Statistiques par plateforme")
-    if offres_brutes:
-        counts = {}
-        for o in offres_brutes:
-            s = o.get("source", "Autre")
-            counts[s] = counts.get(s, 0) + 1
-
-        cols = st.columns(max(len(counts), 1))
-        for idx, (src_name, count) in enumerate(counts.items()):
-            cols[idx].metric(f"Offres {src_name}", count)
-    else:
-        st.write("Aucune offre disponible en mémoire.")
-
-# ------------------------------------------
-# ONGLET 3 : PURGE DE L'HISTORIQUE
-# ------------------------------------------
-with tab_gestion:
-    st.header("⚙️ Centre de maintenance & Purge mémoire")
-    st.write("Gestion de la rétention automatique des fichiers JSON et PDF.")
-
-    offres_recentes, offres_obsoletes = separer_recentes_obsoletes(offres_brutes, JOURS_RETENTION_MAX)
-
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("Stock total en base", len(offres_brutes))
-    col_m2.metric(f"Moins de {JOURS_RETENTION_MAX} jours", len(offres_recentes))
-    col_m3.metric("Obsolètes", len(offres_obsoletes))
-
-    st.markdown("---")
-
-    col_act1, col_act2 = st.columns(2)
-
-    with col_act1:
-        st.subheader(f"🧹 Purge programmée ({JOURS_RETENTION_MAX} jours)")
-        st.caption(f"Supprime les offres datant de plus de {JOURS_RETENTION_MAX * 24} heures.")
-        if st.button("Purger les offres obsolètes", type="primary", use_container_width=True):
-            for item in offres_obsoletes:
-                pdf_p = item.get("cv_pdf_path")
-                if pdf_p and os.path.exists(pdf_p):
-                    try:
-                        os.remove(pdf_p)
-                    except Exception:
-                        pass
-
-            sauvegarder_historique(offres_recentes)
-            st.cache_data.clear()
-            st.success(f"Purge réussie : {len(offres_obsoletes)} offre(s) supprimée(s) !")
-            st.rerun()
-
-    with col_act2:
-        st.subheader("⚠️ Réinitialisation complète")
-        st.caption("Vide totalement la base JSON et supprime tous les PDF générés.")
-        with st.popover("Vider l'historique complet"):
-            st.warning("Attention : cette action effacera absolument toutes les offres en mémoire.")
-            if st.button("Confirmer l'effacement total", use_container_width=True):
-                for item in offres_brutes:
-                    pdf_p = item.get("cv_pdf_path")
-                    if pdf_p and os.path.exists(pdf_p):
-                        try:
-                            os.remove(pdf_p)
-                        except Exception:
-                            pass
-
-                sauvegarder_historique([])
-                st.cache_data.clear()
-                st.success("La base de données a été réinitialisée.")
-                st.rerun()
+            with col2:
+                st.write("**📝 Lettre de motivation générée :**")
+                st.text_area(
+                    label="Lettre",
+                    value=analyse.get('lettre_motivation', ''),
+                    height=180,
+                    key=item.get('id')
+                )
