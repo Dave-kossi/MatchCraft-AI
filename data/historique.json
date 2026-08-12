@@ -2348,5 +2348,62 @@
       "lettre_motivation": "Objet : Candidature pour le poste de Chargé d'étude architecture AI (F/H) - Stage de 4 à 6 mois\n\nJe me permets de vous adresser ma candidature pour le poste de Chargé d'étude architecture AI (F/H) au sein d'AXA Partners, pour un stage d'une durée de 4 à 6 mois. La détection de fraude et l'optimisation des processus métier grâce à l'intelligence artificielle représentent des enjeux majeurs pour votre entreprise, et je suis en mesure de contribuer à ces défis grâce à mon expérience et mes compétences en matière de développement d'algorithmes et de modèles d'apprentissage automatique.\n\nMes travaux antérieurs ont porté sur la détection de fraude bancaire et le développement d'assistants intelligents, domaines qui correspondent directement aux objectifs d'AXA Partners. Voici deux projets spécifiques qui démontrent mes compétences :\n• bank-transaction-fraud-detection : Ce projet a impliqué l'utilisation de techniques de Machine Learning pour détecter les transactions bancaires frauduleuses. J'ai travaillé avec Jupyter Notebook pour développer et tester des modèles capables d'identifier les patterns de fraude avec une grande précision.\n• VentiRE-RAG : Dans ce projet, j'ai développé un assistant intelligent utilisant RAG (Retrieval-Augmented Generation) et des outils tels que LlamaIndex, FastEmbed, et Streamlit. Cela a permis de créer un système capable de générer des réponses intelligentes et personnalisées, ce qui peut être appliqué pour optimiser les processus métier et améliorer l'expérience client.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des solutions d'intelligence artificielle pour la détection de fraude et l'amélioration des processus métier. Je suis convaincu que mes compétences en matière de développement d'algorithmes et de modèles d'apprentissage automatique pourraient être mises à profit pour contribuer aux objectifs d'AXA Partners.\n\nJe serais ravi de discuter plus en détail de ma candidature et de mes projets lors d'un entretien. Je vous remercie de l'attention que vous porterez à ma demande et je reste à votre disposition pour toute information complémentaire. Cordialement."
     },
     "cv_pdf_path": "data/cv_generes/CV_Kossi_NOUMAGNO_AXA_Partners_20260808.pdf"
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=80aed862e43acb20",
+    "title": "Ingénieur·e Backend & Intelligence Artificielle",
+    "company": "elevari",
+    "url": "https://fr.indeed.com/viewjob?jk=80aed862e43acb20",
+    "source": "Indeed",
+    "date_ajout": "2026-08-12T03:33:20.167205",
+    "statut": "nouvelle",
+    "analyse": {
+      "score_adequation": 80,
+      "besoin_cle_entreprise": "Développement d'une plateforme SaaS d'analyse de cytométrie en flux basée sur l'intelligence artificielle pour accélérer la recherche et le développement de médicaments.",
+      "preuve_technique_citee": "VentiRE-RAG, bank-transaction-fraud-detection",
+      "points_forts": [
+        "Compétences en analyse de données",
+        "Expérience en développement de plateforme SaaS"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste d'Ingénieur·e Backend & Intelligence Artificielle (6 mois)\n\nEn tant que candidat titulaire d'un Master 2 en Data Science et Intelligence Artificielle, je suis particulièrement attiré par l'offre d'Elevari, qui vise à accélérer la recherche et le développement de médicaments grâce à une plateforme SaaS d'analyse de cytométrie en flux basée sur l'intelligence artificielle. Mon parcours académique et mes expériences professionnelles m'ont permis de développer des compétences solides en analyse de données, en développement de plateformes SaaS et en intelligence artificielle, qui correspondent parfaitement aux enjeux de ce poste.\n\nLes défis posés par l'analyse manuelle et chronophage de la cytométrie en flux, ainsi que la nécessité d'accélérer la recherche et le développement de médicaments, sont des problèmes complexes qui nécessitent des solutions innovantes et basées sur l'intelligence artificielle. Mes projets personnels ont démontré ma capacité à relever de tels défis, notamment :\n* VentiRE-RAG : j'ai développé une plateforme SaaS utilisant Python, LlamaIndex, FastEmbed et Streamlit pour analyser des données et prouver ma capacité à concevoir des solutions de développement de plateformes SaaS.\n* bank-transaction-fraud-detection : j'ai utilisé Jupyter Notebook et des techniques de Machine Learning pour détecter les transactions frauduleuses, démontrant ainsi ma capacité à analyser des données et à développer des algorithmes pour résoudre des problèmes complexes.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, car elles démontrent ma capacité à développer des solutions basées sur l'intelligence artificielle pour analyser des données et résoudre des problèmes complexes. En tant qu'Ingénieur·e Backend & Intelligence Artificielle, je serais en mesure de concevoir et de développer des pipelines IA pour améliorer la qualité des stratégies générées, d'enrichir les bases de connaissances et de concevoir des API REST pour exposer les moteurs algorithmiques propriétaires.\n\nJe suis convaincu que mes compétences et mes expériences professionnelles me permettent de contribuer de manière significative au développement de la plateforme SaaS d'Elevari et à l'accélération de la recherche et du développement de médicaments. Je serais ravi de discuter de ma candidature et de mes qualifications avec vous en détail. Je vous remercie de l'attention que vous porterez à ma candidature et je vous prie de bien vouloir me contacter pour un entretien."
+    }
+  },
+  {
+    "id": "https://fr.indeed.com/viewjob?jk=e2f7cc8cc4d32bd8",
+    "title": "STAGE - Développement et déploiement d'un chatbot IA s'appuyant sur une base de tickets de support F-H",
+    "company": "Safran",
+    "url": "https://fr.indeed.com/viewjob?jk=e2f7cc8cc4d32bd8",
+    "source": "Indeed",
+    "date_ajout": "2026-08-12T03:33:46.544414",
+    "statut": "nouvelle",
+    "analyse": {
+      "score_adequation": 85,
+      "besoin_cle_entreprise": "Développement et déploiement d'un chatbot IA s'appuyant sur une base de tickets de support",
+      "preuve_technique_citee": "VentiRE-RAG, bank-transaction-fraud-detection",
+      "points_forts": [
+        "Connaissances en génie logiciel",
+        "Connaissances en Python et développement web"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le stage de développement et déploiement d'un chatbot IA à Safran Aircraft Engines (6 mois)\n\nEn tant que futur ingénieur en intelligence artificielle, je suis particulièrement attiré par l'offre de stage chez Safran Aircraft Engines, qui vise à développer et déployer un chatbot IA s'appuyant sur une base de tickets de support. Mon parcours universitaire en Master 2 Data Science / IA et mes expériences professionnelles dans le développement de solutions basées sur l'intelligence artificielle me permettent de comprendre les défis techniques et les enjeux métiers liés à ce projet.\n\nVoici quelques-uns de mes projets qui démontrent mes compétences techniques et mes réalisations :\n* VentiRE-RAG : J'ai développé un chatbot utilisant Python, LlamaIndex et FastEmbed, et déployé via Streamlit. Ce projet a nécessité une compréhension approfondie des technologies d'IA générative et de leur intégration dans des solutions de chatbot.\n* bank-transaction-fraud-detection : J'ai travaillé sur la détection de fraude dans les transactions bancaires en utilisant Jupyter Notebook et des algorithmes de Machine Learning. Ce projet a mis en avant mes capacités d'analyse de données et de développement de modèles prédictifs.\n\nCes réalisations répondent concrètement aux défis décrits dans l'offre, notamment la conception et le développement d'un prototype de chatbot IA connecté à une base de tickets de support, ainsi que la mise en œuvre de mécanismes de recherche documentaire et de restitution des connaissances. Mon expérience dans le développement de solutions basées sur l'intelligence artificielle et mon intérêt pour les nouvelles technologies me permettent de comprendre les enjeux du projet et de proposer des solutions innovantes.\n\nJe suis impatient de discuter de ce projet et de mes qualifications avec vous. Je vous remercie de l'attention que vous porterez à ma candidature. Je suis à votre disposition pour un entretien et je me réjouis de la possibilité de rejoindre l'équipe de Safran Aircraft Engines pour contribuer au développement de solutions innovantes basées sur l'intelligence artificielle."
+    }
+  },
+  {
+    "id": "https://www.linkedin.com/jobs/view/4451959904",
+    "title": "Apprenti(e) Chef(fe) de projet applicatif, IA, Data & BI Contexte",
+    "company": "Rabot Dutilleul",
+    "url": "https://www.linkedin.com/jobs/view/4451959904",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-12T03:34:09.166136",
+    "statut": "nouvelle",
+    "analyse": {
+      "score_adequation": 80,
+      "besoin_cle_entreprise": "Développement d'applications applicatives, Intelligence Artificielle, Data et Business Intelligence pour l'entreprise Rabot Dutilleul",
+      "preuve_technique_citee": "VentiRE-RAG, bank-transaction-fraud-detection",
+      "points_forts": [
+        "Compétences en Machine Learning",
+        "Expérience en développement d'applications applicatives"
+      ],
+      "lettre_motivation": "Objet : Candidature pour le poste d'Apprenti(e) Chef(fe) de projet applicatif, IA, Data & BI - Stage 6 mois\n\nEn tant que candidat issu d'un master 2 en Data Science et Intelligence Artificielle, je suis particulièrement intéressé par le poste d'Apprenti(e) Chef(fe) de projet applicatif, IA, Data & BI chez Rabot Dutilleul, car il correspond parfaitement à mes compétences et à mes intérêts dans le développement d'applications applicatives, l'Intelligence Artificielle, la Data et le Business Intelligence.\n\nLes défis que Rabot Dutilleul souhaite relever en termes de développement d'applications applicatives, d'Intelligence Artificielle, de Data et de Business Intelligence sont au cœur de mes préoccupations et de mes compétences. Je suis convaincu que mes expériences et mes projets personnels pourraient apporter une valeur ajoutée significative à votre équipe. Voici deux exemples de projets qui démontrent mes capacités :\n\n* VentiRE-RAG : J'ai développé un assistant RAG intelligent et local pour l'analyse croisée de la réglementation RE2020 et des protocoles de contrôle de la ventilation, en utilisant Python, LlamaIndex, FastEmbed et Streamlit. Ce projet a nécessité une compréhension approfondie des technologies de traitement de langage naturel et de leur application à des problèmes concrets.\n* bank-transaction-fraud-detection : J'ai créé un modèle de détection de fraude bancaire en utilisant Jupyter Notebook et des techniques de Machine Learning. Ce projet a impliqué l'analyse de grandes quantités de données et la mise en œuvre de méthodes pour identifier les transactions anormales.\n\nCes projets démontrent ma capacité à développer des solutions innovantes et efficaces pour répondre à des problèmes complexes. Je suis persuadé que mes compétences en développement d'applications applicatives, Intelligence Artificielle, Data et Business Intelligence pourraient être mises à profit pour relever les défis de Rabot Dutilleul et contribuer à l'amélioration de ses processus et de ses performances.\n\nJe serais ravi de discuter plus en détail de mes qualifications et de mes projets avec vous. Je vous remercie de l'attention que vous porterez à ma candidature et je vous prie de bien vouloir me contacter pour un entretien. Je suis impatient de découvrir comment mes compétences pourraient être utilisées pour contribuer au succès de Rabot Dutilleul.\n\nCordialement,\n[Votre Nom]"
+    }
   }
 ]
