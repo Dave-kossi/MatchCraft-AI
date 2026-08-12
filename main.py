@@ -9,10 +9,10 @@ import pandas as pd
 from src.agent import analyser_et_rediger
 from src.company_scraper import MOTS_CLES_PAR_DEFAUT, collecter_offres_grands_groupes
 from src.github_parser import lire_profil_github
-from src.github_writer import sauvegarder_json_sur_github
 from src.historique import (
+    JOURS_RETENTION_MAX,
     charger_historique,
-    nettoyer_offres_obsoletes,
+    purger_historique,
     sauvegarder_historique,
 )
 from src.parser import lire_cv_pdf, lire_portfolio_html
@@ -76,20 +76,9 @@ def charger_ids_rejetes(chemin: str = CHEMIN_REJETS) -> set:
 
 
 def sauvegarder_ids_rejetes(ids: set, chemin: str = CHEMIN_REJETS):
-    """Enregistre les rejets localement ET sur le dépôt GitHub."""
     os.makedirs(os.path.dirname(chemin), exist_ok=True)
-    liste_ids = list(ids)
-    
-    # Écriture locale
     with open(chemin, "w", encoding="utf-8") as f:
-        json.dump(liste_ids, f, ensure_ascii=False, indent=2)
-
-    # Synchronisation GitHub
-    sauvegarder_json_sur_github(
-        donnees=liste_ids,
-        chemin_fichier=chemin,
-        message_commit="Mise à jour du registre des offres rejetées"
-    )
+        json.dump(list(ids), f, ensure_ascii=False, indent=2)
 
 
 # ==========================================
@@ -132,31 +121,25 @@ def tout_rassembler() -> pd.DataFrame:
 def execution_job():
     print(f"\n🚀 [MatchCraft AI] Démarrage de l'agent pour {GITHUB_USERNAME}...")
 
-    # 1. Purge et nettoyage automatique des vieilles offres (> 2 jours)
-    historique = nettoyer_offres_obsoletes(max_jours=2)
-
-    # 2. Chargement du profil candidat
+    # Chargement des données candidat
     cv_texte = lire_cv_pdf(CHEMIN_CV) if os.path.exists(CHEMIN_CV) else ""
     portfolio_texte = lire_portfolio_html(CHEMIN_PORTFOLIO) if os.path.exists(CHEMIN_PORTFOLIO) else ""
     github_texte = lire_profil_github(GITHUB_USERNAME)
 
+    historique = purger_historique(JOURS_RETENTION_MAX)
     ids_connus = {item["id"] for item in historique if item.get("id")}
     ids_rejetes = charger_ids_rejetes()
 
-    # 3. Collecte des opportunités
     offres = tout_rassembler()
 
     if offres.empty:
         print("❌ Aucune nouvelle opportunité qualifiée lors de ce scan.")
-        sauvegarder_historique(historique, synchroniser_github=True)
+        sauvegarder_historique(historique)
         print("🏁 [MatchCraft AI] Fin du cycle.")
         return
 
     print(f"⚡ {len(offres)} offres prêtes pour évaluation agentique...\n")
 
-    nouvelles_offres_ajoutees = 0
-
-    # 4. Évaluation agentique des offres
     for _, row in offres.iterrows():
         job_id = str(row.get("job_url", ""))
 
@@ -176,17 +159,12 @@ def execution_job():
             "description": str(row.get("description", "")),
         }
 
-        # Structure du contexte candidat complète
-        contexte_candidat = {
-            "cv": cv_texte,
-            "portfolio": portfolio_texte,
-            "github": github_texte
-        }
-
-        # Pipeline LLM (Matching + Storytelling + Lettre)
+        # Pipeline LLM (Matching + Rédaction)
         analyse = analyser_et_rediger(
             offre=offre_dict,
-            cv_texte_ou_contexte=contexte_candidat
+            portfolio=portfolio_texte,
+            github=github_texte,
+            cv=cv_texte,
         )
         score = analyse.get("score_adequation", 0) if analyse else 0
 
@@ -198,16 +176,10 @@ def execution_job():
                 "url": job_id,
                 "source": source_plateforme,
                 "date_ajout": datetime.now().isoformat(),
-                "statut": "A postuler",
-                "score_adequation": score,
-                "besoin_cle_entreprise": analyse.get("besoin_cle_entreprise", ""),
-                "preuve_technique_citee": analyse.get("preuve_technique_citee", ""),
-                "points_forts": analyse.get("points_forts", []),
-                "lettre_motivation": analyse.get("lettre_motivation", "")
+                "analyse": analyse,
             }
             historique.append(resultat)
             ids_connus.add(job_id)
-            nouvelles_offres_ajoutees += 1
             print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%)")
         else:
             ids_rejetes.add(job_id)
@@ -215,14 +187,8 @@ def execution_job():
 
         time.sleep(random.uniform(1, 2))
 
-    # 5. Synchronisation locale et distante (GitHub)
-    sauvegarder_historique(
-        historique,
-        synchroniser_github=True,
-        message_commit=f"🤖 Ajout de {nouvelles_offres_ajoutees} nouvelle(s) offre(s) qualifiée(s)"
-    )
+    sauvegarder_historique(historique)
     sauvegarder_ids_rejetes(ids_rejetes)
-
     print("\n✅ [MatchCraft AI] Synchronisation de la base terminée avec succès !")
 
 
