@@ -37,44 +37,46 @@ def _appel_groq(messages: list, model: str, temperature: float, max_tokens: int,
 
 
 def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
-    """
-    Étape 1 & 2 : Analyse dynamiquement l'offre et sélectionne
-    les projets/compétences les plus pertinents dans le dossier du candidat.
-    """
+    """Analyse dynamiquement l'offre et sélectionne les projets/compétences les plus pertinents."""
     prompt = f"""
-    Tu es un Expert Recruteur et Data Scientist.
-    Analyse l'offre d'emploi ci-dessous et effectue un matching dynamique avec le profil du candidat.
+    Tu es un Lead Data Scientist et Recruteur Senior.
+    Analyse l'offre d'emploi ci-dessous et effectue un matching stratégique avec le dossier du candidat.
 
     OFFRE D'EMPLOI :
     Titre : {offre.get('title')}
     Entreprise : {offre.get('company')}
     Description : {offre.get('description', '')[:3500]}
 
-    DOSSIER COMPLET DU CANDIDAT :
+    DOSSIER DU CANDIDAT :
     [CV] : {cv_texte[:2500]}
     [PORTFOLIO] : {portfolio_texte[:1500]}
     [GITHUB] : {github_texte[:2000]}
 
     TÂCHES :
-    1. Identifie le secteur et l'enjeu principal de l'entreprise (ex: détection de fraude, optimisation RAG, Computer Vision, etc.).
-    2. Sélectionne les 2 PROJETS du candidat les plus pertinents par rapport à cet enjeu.
-    3. Extrais les compétences techniques et le vocabulaire métier exacts à réutiliser dans la lettre.
+    1. Identifie l'enjeu business et technique majeur de l'entreprise sur ce poste.
+    2. Sélectionne les 2 PROJETS du candidat dont l'architecture, la méthodologie ou le résultat répondent le plus directement à cet enjeu.
+    3. Identifie 3 COMPÉTENCES CLÉS (hard + soft skills/méthodes) que le candidat pourra immédiatement mettre au service de l'entreprise.
 
     Réponds UNIQUEMENT sous forme de JSON strict :
     {{
-      "secteur_enjeu": "Description en une phrase de l'enjeu principal de l'offre",
-      "mots_cles_metier": ["mot1", "mot2", "mot3", "mot4"],
+      "secteur_enjeu": "Explication de l'enjeu stratégique de l'entreprise",
+      "mots_cles_metier": ["mots", "techniques", "et", "métier"],
       "projets_selectionnes": [
         {{
           "nom": "Nom du projet 1",
-          "technos_cles": "Technos/méthodes utilisées dans ce projet",
-          "pourquoi_pertinent": "Pourquoi ce projet prouve que le candidat peut réussir sur ce poste"
+          "technos_cles": "Outils, algos, frameworks utilisés",
+          "pourquoi_pertinent": "En quoi la résolution de ce projet prouve la capacité à réussir chez l'employeur"
         }},
         {{
           "nom": "Nom du projet 2",
-          "technos_cles": "Technos/méthodes utilisées dans ce projet",
-          "pourquoi_pertinent": "Pourquoi ce projet prouve que le candidat peut réussir sur ce poste"
+          "technos_cles": "Outils, algos, frameworks utilisés",
+          "pourquoi_pertinent": "En quoi la résolution de ce projet prouve la capacité à réussir chez l'employeur"
         }}
+      ],
+      "competences_a_apporter": [
+        "Compétence 1 et son application concrète pour l'entreprise",
+        "Compétence 2 et son application concrète pour l'entreprise",
+        "Compétence 3 et son application concrète pour l'entreprise"
       ],
       "score_adequation": 85,
       "points_forts": ["Point fort 1", "Point fort 2"]
@@ -85,7 +87,8 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
             messages=[{"role": "user", "content": prompt}],
             model=MODEL_LEGER,
             temperature=0.2,
-            max_tokens=800,
+            max_tokens=900,
+            json_mode=True
         )
         return json.loads(r.choices[0].message.content)
     except Exception as e:
@@ -94,52 +97,58 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
             "secteur_enjeu": "Analyse d'offre non disponible",
             "mots_cles_metier": [],
             "projets_selectionnes": [],
+            "competences_a_apporter": [],
             "score_adequation": 50,
             "points_forts": []
         }
 
 
 def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, retour_critique: str = None) -> str:
-    """
-    Étape 3 : Rédige la lettre de motivation sur mesure en intégrant
-    dynamiquement les projets et le vocabulaire identifiés lors du matching.
-    """
+    """Rédige la lettre de motivation sur-mesure avec un style fluide et pragmatique."""
+    projets_list = analyse_matching.get("projets_selectionnes", [])
     projets_str = ""
-    for p in analyse_matching.get("projets_selectionnes", []):
-        projets_str += f"• {p.get('nom')} : {p.get('technos_cles')} — {p.get('pourquoi_pertinent')}\n"
+    for p in projets_list:
+        if isinstance(p, dict):
+            projets_str += f"- **{p.get('nom')}** ({p.get('technos_cles')}) : {p.get('pourquoi_pertinent')}\n"
+
+    competences_str = "\n".join([f"- {c}" for c in analyse_matching.get("competences_a_apporter", [])])
 
     system_prompt = f"""
-    Tu es un candidat de niveau Master 2 Data Science / IA rédigant une LETTRE DE MOTIVATION SUR MESURE, PERCUTANTE ET EXTRÊMEMENT TECHNIQUE.
+    Tu es un ingénieur/candidat Data Science / IA de niveau Master 2.
+    Tu rédiges une LETTRE DE MOTIVATION ULTRA-PERSONNALISÉE, NATURELLE ET CONVAINCANTE pour postuler chez {offre.get('company')}.
 
-    ENTREPRISE CIBLE : {offre.get('company')}
-    INTITULÉ DU POSTE : {offre.get('title')}
-    ENJEU PRINCIPAL IDENTIFIÉ : {analyse_matching.get('secteur_enjeu')}
-    MOTS CLÉS DU SECTEUR À INTÉGRER : {', '.join(analyse_matching.get('mots_cles_metier', []))}
+    CADRE DE RÉDACTION :
+    - ENTREPRISE : {offre.get('company')}
+    - INTITULÉ DU POSTE : {offre.get('title')}
+    - ENJEU PRINCIPAL : {analyse_matching.get('secteur_enjeu')}
 
-    PROJETS SPÉCIFIQUES À VALORISER (ISSUS DU MATCHING) :
+    ÉLÉMENTS À VALORISER DANS LE CORPS DE LA LETTRE :
+    Projets sélectionnés pour l'entreprise :
     {projets_str}
 
-    CONSIGNES ET STRUCTURE DE RÉDACTION :
-    1. Objet : Mentionner clairement l'intitulé du poste et la durée (ex: stage 6 mois).
-    2. Accroche : Faire un lien direct entre le parcours du candidat et l'enjeu précis de l'entreprise.
-    3. Corps (Preuves & Projets) : Utiliser OBLIGATOIREMENT une liste à puces (•) pour détailler les 2 projets sélectionnés ci-dessus, avec leurs caractéristiques techniques (architectures, algorithmes, métriques, outils).
-    4. Projection Métier : Expliquer comment ces réalisations répondent concrètement aux défis décrits dans l'offre.
-    5. Conclusion : Demande d'entretien directe et formule de politesse soignée.
+    Compétences et valeur ajoutée directe :
+    {competences_str}
 
-    REGLES STRICTES DE STYLE (ANTI-RÉPÉTITION & ANTI-PHRASES CREUSES) :
-    - INTERDIT d'utiliser des formules génériques : "je suis convaincu que", "un atout pour votre équipe", "excellent candidat", "passionné depuis toujours", "dynamique et motivé".
-    - Chaque paragraphe doit apporter une preuve ou un élément factuel.
-    - Ton : Professionnel, orienté ingénierie et résultats.
+    DIRECTIVES DU STYLE HUMAIN & STRUCTURE :
+    1. **Accroche ciblée (VOUS) :** Montre d'emblée que tu as compris les enjeux actuels de {offre.get('company')} (pas de généralités platoniciennes).
+    2. **Preuve par le projet (MOI) :** Expose les 2 projets sélectionnés en expliquant le "bien-fondé" de chacun. Explique la problématique initiale, les choix techniques faits et les résultats obtenus pour démontrer ta rigueur opérationnelle.
+    3. **Valeur ajoutée (NOUS) :** Rédige un paragraphe dédié où tu détailles ce que tu apporteras concrètement aux équipes de {offre.get('company')} dès ton arrivée (méthodologie, autonomie, stack technique, vision métier).
+    4. **Conclusion :** Demande d'échange technique directe et formule de politesse sobre et professionnelle.
+
+    INTERDICTIONS STRICTES (ANTI-ROBOT & ANTI-LLM) :
+    - Bannis absolument : "Je soussigné", "C'est avec un grand enthousiasme", "Je suis convaincu d'être le candidat idéal", "Atout précieux pour votre équipe", "Passionné depuis mon plus jeune âge".
+    - Ne fais pas un simple catalogue du CV : fais du STORYTELLING TECHNIQUE.
+    - Écris en Français parfait, fluide et direct.
     """
 
     if retour_critique:
-        system_prompt += f"\n\n⚠️ REVISION REQUISE : La version précédente comporte des faiblesses. Corrige impérativement : {retour_critique}"
+        system_prompt += f"\n\n⚠️ REVISION REQUISE : Corrige les défauts identifiés : {retour_critique}"
 
     user_prompt = f"""
-    DESCRIPTION COMPLETE DE L'OFFRE :
+    DESCRIPTION DE L'OFFRE :
     {offre.get('description', '')[:3000]}
 
-    Rédige la lettre complète en texte pur.
+    Rédige la lettre complète prête à envoyer.
     """
 
     r = _appel_groq(
@@ -148,7 +157,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
             {"role": "user", "content": user_prompt}
         ],
         model=MODEL_REDACTION,
-        temperature=0.3,
+        temperature=0.35,
         max_tokens=2500,
         json_mode=False
     )
@@ -156,26 +165,26 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
 
 
 def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict) -> dict:
-    """Étape 4 : Vérification de la lettre (absence de phrases creuses et adaptation à l'offre)."""
+    """Étape de contrôle qualité pour garantir le ton humain et la précision technique."""
     if not lettre:
         return {"score": 0, "justification": "Lettre vide."}
 
     prompt = f"""
     Tu es un réviseur de candidatures ultra-strict.
-    Évalue cette lettre de motivation destinée à l'offre '{offre.get('title')}' chez '{offre.get('company')}'.
+    Évalue le ton et la pertinence de cette lettre pour le poste '{offre.get('title')}' chez '{offre.get('company')}'.
 
-    CRITÈRES D'ÉVALUATION :
-    1. Prescriptions anti-phrases creuses : Contient-elle des expressions bannies comme "je suis convaincu", "atout pour votre équipe", "excellent candidat" ? (Si oui -> Baisse la note).
-    2. Adaptation : Les projets cités et le vocabulaire correspondent-ils bien à cette offre spécifique ?
-    3. Présence des puces techniques : La lettre utilise-t-elle des puces claires pour exposer les réalisations ?
+    CRITÈRES STRICTS :
+    1. Ton humain et naturel : Est-ce que cela ressemble à une vraie lettre rédigée par un ingénieur compétent, ou à du texte généré par IA ? (Formules pompeuses = Note < 7).
+    2. Justification des projets : Les projets sont-ils bien explicités avec leur bien-fondé par rapport au besoin de l'entreprise ?
+    3. Apport de compétences : La lettre détaille-t-elle la valeur ajoutée concrète pour l'équipe ?
 
-    LETTRE À ÉVALUER :
+    LETTRE :
     {lettre[:3000]}
 
     Réponds UNIQUEMENT en JSON strict :
     {{
       "score": <note sur 10>,
-      "justification": "Explication courte si la note est inférieure à 8"
+      "justification": "Raison courte si la note est < 8"
     }}
     """
     try:
@@ -184,6 +193,7 @@ def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict) -> dict:
             model=MODEL_LEGER,
             temperature=0,
             max_tokens=200,
+            json_mode=True
         )
         res = json.loads(r.choices[0].message.content)
         return {"score": int(res.get("score", 10)), "justification": str(res.get("justification", ""))}
@@ -192,32 +202,47 @@ def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict) -> dict:
         return {"score": 10, "justification": "Contrôle indisponible"}
 
 
-def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
-    """Pipeline principal de l'agent adapteur d'offres."""
+def analyser_et_rediger(offre: dict, cv_texte_ou_contexte, portfolio_texte: str = "", github_texte: str = "") -> dict:
+    """Pipeline d'analyse, de matching et de rédaction dynamique."""
     try:
-        print(f"🔍 Analyse et matching pour l'offre : {offre.get('title')} chez {offre.get('company')}...")
+        if isinstance(cv_texte_ou_contexte, dict):
+            cv_texte = cv_texte_ou_contexte.get("cv", "")
+            portfolio_texte = cv_texte_ou_contexte.get("portfolio", "")
+            github_texte = str(cv_texte_ou_contexte.get("github", ""))
+        else:
+            cv_texte = cv_texte_ou_contexte
+
+        print(f"🔍 Analyse & Storytelling pour : {offre.get('title')} chez {offre.get('company')}...")
 
         matching = _extraire_et_matcher(offre, cv_texte, portfolio_texte, github_texte)
         lettre = _rediger_lettre_adaptee(offre, cv_texte, matching)
         critique = _critiquer_lettre(lettre, offre, matching)
 
         if critique["score"] < SCORE_REGENERATION_SEUIL:
-            print(f"  ⚠️ Lettre ajustée ({critique['score']}/10 : {critique['justification']}) — régénération...")
+            print(f"  ⚠️ Réajustement du style ({critique['score']}/10 : {critique['justification']})...")
             lettre = _rediger_lettre_adaptee(
                 offre, cv_texte, matching, retour_critique=critique["justification"]
             )
 
         nb_mots = len(lettre.split())
-        print(f"✅ Lettre adaptée générée ({nb_mots} mots).")
+        print(f"✅ Lettre rédigée ({nb_mots} mots). Score adéquation : {matching.get('score_adequation', 0)}%")
+
+        projets_retenus = [p.get("nom", "") for p in matching.get("projets_selectionnes", []) if isinstance(p, dict)]
 
         return {
             "score_adequation": int(matching.get("score_adequation", 0)),
             "besoin_cle_entreprise": str(matching.get("secteur_enjeu", "")),
-            "preuve_technique_citee": ", ".join([p.get("nom", "") for p in matching.get("projets_selectionnes", [])]),
+            "preuve_technique_citee": ", ".join(projets_retenus),
             "points_forts": matching.get("points_forts", []),
             "lettre_motivation": lettre
         }
 
     except Exception as e:
         print(f"⚠️ Erreur globale agent : {e}")
-        return None
+        return {
+            "score_adequation": 0,
+            "besoin_cle_entreprise": "Erreur d'analyse",
+            "preuve_technique_citee": "Aucune",
+            "points_forts": [],
+            "lettre_motivation": "Génération de la lettre impossible."
+        }
