@@ -1,43 +1,36 @@
-name: MatchCraft AI Automation
+name: MatchCraft AI - Cron
+
 on:
   schedule:
-    - cron: '30 6,10,13,16 * * *'
-  workflow_dispatch:
-permissions:
-  contents: write
-concurrency:
-  group: MatchCraft-AI-cron
-  cancel-in-progress: false
+    # 08:30 / 12:30 / 15:30 / 18:30 heure de Paris ≈ 06:30 / 10:30 / 13:30 / 16:30 UTC (CEST, été)
+    # ⚠️ décalage de -1h en hiver (CET) — GitHub Actions ne gère pas le fuseau automatiquement
+    - cron: "30 6,10,13,16 * * *"
+  workflow_dispatch:  # permet de lancer manuellement depuis l'onglet Actions
+
 jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le code
+      - name: Checkout du repo
         uses: actions/checkout@v4
-      - name: Configurer Python
-        uses: actions/setup-python@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.11"
+
       - name: Installer les dépendances
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Exécuter l'Agent
+        run: pip install -r requirements.txt
+
+      - name: Lancer MatchCraft AI
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python main.py
-      - name: Sauvegarder les résultats dans le dépôt
-        run: |
-          git config --global user.name 'MatchCraft-AI-Bot'
-          git config --global user.email 'bot@github.com'
+        run: python main.py
 
-          # data/ contient maintenant tout : historique.json, offres_rejetees.json,
-          # et les CV PDF générés dans data/cvs/
-          git add data/
-
-          git commit -m "Auto-update des offres [skip ci]" || exit 0
-          git pull --rebase origin main
+      - name: Commit et push des résultats
+        run: |
+          git config user.name "MatchCraft Bot"
+          git config user.email "bot@matchcraft.local"
+          git add data/historique.json data/offres_rejetees.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Mise à jour automatique des offres"
           git push
