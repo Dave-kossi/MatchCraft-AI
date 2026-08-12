@@ -1,103 +1,88 @@
-# src/historique.py
-import os
-import json
 from datetime import datetime, timedelta
+import json
+import os
+from src.github_writer import sauvegarder_historique_sur_github
 
-CHEMIN_HISTORIQUE = "data/historique.json"
-JOURS_RETENTION_MAX = 2
-
-
-def _get_mtime(chemin: str) -> float:
-    """Retourne la date de dernière modification du fichier JSON.
-    Permet d'invalider automatiquement le cache Streamlit lorsque GitHub Actions met à jour le fichier.
-    """
-    if os.path.exists(chemin):
-        return os.path.getmtime(chemin)
-    return 0.0
+HISTORIQUE_FILE = "data/historique.json"
 
 
-def _charger_depuis_disque(chemin: str) -> list:
-    """Lecture brute du fichier sur le disque."""
-    if not os.path.exists(chemin):
+def charger_historique() -> list:
+    """Charge le fichier historique.json s'il existe."""
+    if not os.path.exists(HISTORIQUE_FILE):
         return []
     try:
-        with open(chemin, "r", encoding="utf-8") as f:
+        with open(HISTORIQUE_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        print(f"⚠️ Erreur lors du chargement de l'historique : {e}")
+        print(f"⚠️ Erreur de lecture de l'historique : {e}")
         return []
 
 
-def charger_historique(chemin: str = CHEMIN_HISTORIQUE) -> list:
-    """Charge l'historique de manière optimisée.
-    Applique le cache Streamlit si exécuté dans une app Streamlit.
+def sauvegarder_historique(historique: list, synchroniser_github: bool = True, message_commit: str = "Mise à jour statut offres"):
+    """Enregistre l'historique en local ET pousse sur GitHub."""
+    os.makedirs(os.path.dirname(HISTORIQUE_FILE), exist_ok=True)
+    
+    # 1. Écriture locale
+    with open(HISTORIQUE_FILE, "w", encoding="utf-8") as f:
+        json.dump(historique, f, ensure_ascii=False, indent=2)
+
+    # 2. Synchronisation GitHub
+    if synchroniser_github:
+        sauvegarder_historique_sur_github(historique, message=message_commit)
+
+
+def supprimer_offre_par_id(offre_id: str) -> list:
+    """Supprime une offre spécifique par son ID."""
+    historique = charger_historique()
+    nouvel_historique = [o for o in historique if o.get("id") != offre_id]
+    
+    sauvegarder_historique(
+        nouvel_historique, 
+        synchroniser_github=True, 
+        message_commit=f"Suppression de l'offre ID {offre_id}"
+    )
+    return nouvel_historique
+
+
+def nettoyer_offres_obsoletes(max_jours: int = 2) -> list:
     """
-    mtime = _get_mtime(chemin)
+    Supprime automatiquement les offres de plus de `max_jours`.
+    Conserve toujours les offres avec le statut 'Postulé' ou 'Entretien'.
+    """
+    historique = charger_historique()
+    if not historique:
+        return []
 
-    try:
-        import streamlit as st
+    offres_gardees = []
+    nb_purged = 0
 
-        @st.cache_data(ttl=300)
-        def _charger_avec_cache(path: str, file_mtime: float) -> list:
-            return _charger_depuis_disque(path)
+    for offre in historique:
+        statut = offre.get("statut", "A postuler")
+        # Ne jamais supprimer si on a déjà postulé ou obtenu un entretien
+        if statut in ["Postulé", "Entretien"]:
+            offres_gardees.append(offre)
+            continue
 
-        return _charger_avec_cache(chemin, mtime)
+        date_str = offre.get("date_ajout") or offre.get("created_at") or offre.get("date")
+        if not date_str:
+            offres_gardees.append(offre)
+            continue
 
-    except ImportError:
-        # Exécution hors Streamlit (Agent / Script CRON)
-        return _charger_depuis_disque(chemin)
+        try:
+            date_offre = datetime.fromisoformat(date_str.split("T")[0])
+            if (datetime.now() - date_offre) > timedelta(days=max_jours):
+                nb_purged += 1
+            else:
+                offres_gardees.append(offre)
+        except Exception:
+            offres_gardees.append(offre)
 
+    if nb_purged > 0:
+        print(f"🧹 {nb_purged} offre(s) obsolète(s) supprimée(s).")
+        sauvegarder_historique(
+            offres_gardees, 
+            synchroniser_github=True, 
+            message_commit=f"🧹 Nettoyage auto : {nb_purged} offre(s) expirée(s)"
+        )
 
-def sauvegarder_historique(data: list, chemin: str = CHEMIN_HISTORIQUE):
-    os.makedirs(os.path.dirname(chemin), exist_ok=True)
-    with open(chemin, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    # Si on est dans Streamlit, on vide le cache immédiatement après modification
-    try:
-        import streamlit as st
-        st.cache_data.clear()
-    except Exception:
-        pass
-
-
-def _parser_date(date_str) -> datetime | None:
-    """Parsing défensif — gère aussi bien une date absente qu'un type inattendu."""
-    if not date_str or not isinstance(date_str, str):
-        return None
-    try:
-        return datetime.fromisoformat(date_str)
-    except (ValueError, TypeError):
-        return None
-
-
-def separer_recentes_obsoletes(historique: list, jours_max: int = JOURS_RETENTION_MAX) -> tuple[list, list]:
-    """Sépare l'historique en (offres récentes, offres obsolètes) selon la
-    date d'ajout. Une date absente/invalide est traitée comme récente,
-    pour ne jamais purger par erreur une offre mal datée."""
-    limite = datetime.now() - timedelta(days=jours_max)
-    recentes, obsoletes = [], []
-
-    for item in historique:
-        dt = _parser_date(item.get("date_ajout"))
-        if dt is None or dt >= limite:
-            recentes.append(item)
-        else:
-            obsoletes.append(item)
-
-    return recentes, obsoletes
-
-
-def purger_historique(jours_max: int = JOURS_RETENTION_MAX, chemin: str = CHEMIN_HISTORIQUE) -> list:
-    """Charge, purge et retourne l'historique nettoyé (ne sauvegarde pas —
-    laisse l'appelant décider quand persister)."""
-    historique = charger_historique(chemin)
-    recentes, obsoletes = separer_recentes_obsoletes(historique, jours_max)
-    if obsoletes:
-        print(f"🧹 Purge automatique : {len(obsoletes)} offre(s) de plus de {jours_max} jours supprimée(s).")
-    return recentes
-
-
-def formater_date_affichage(date_str) -> str:
-    dt = _parser_date(date_str)
-    return dt.strftime("%d/%m/%Y à %H:%M") if dt else "Date inconnue"
+    return offres_gardees
