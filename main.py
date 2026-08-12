@@ -49,7 +49,7 @@ MOTS_CLES_CONTRAT = [
 
 
 def _contient_mot(mots: list, texte: str) -> bool:
-    """Matching à limites de mots — évite les faux positifs (ex: 'ml' dans 'html')."""
+    """Matching à limites de mots — évite les faux positifs."""
     return any(re.search(rf"\b{re.escape(mot)}\b", texte) for mot in mots)
 
 
@@ -121,11 +121,11 @@ def tout_rassembler() -> pd.DataFrame:
 def execution_job():
     print(f"\n🚀 [MatchCraft AI] Démarrage de l'agent pour {GITHUB_USERNAME}...")
 
-    # Chargement des données candidat
     cv_texte = lire_cv_pdf(CHEMIN_CV) if os.path.exists(CHEMIN_CV) else ""
     portfolio_texte = lire_portfolio_html(CHEMIN_PORTFOLIO) if os.path.exists(CHEMIN_PORTFOLIO) else ""
     github_texte = lire_profil_github(GITHUB_USERNAME)
 
+    # Purge initiale de la base locale
     historique = purger_historique(JOURS_RETENTION_MAX)
     ids_connus = {item["id"] for item in historique if item.get("id")}
     ids_rejetes = charger_ids_rejetes()
@@ -141,7 +141,7 @@ def execution_job():
     print(f"⚡ {len(offres)} offres prêtes pour évaluation agentique...\n")
 
     for _, row in offres.iterrows():
-        job_id = str(row.get("job_url", ""))
+        job_id = str(row.get("job_url", "")).strip()
 
         if not job_id or job_id in ids_connus or job_id in ids_rejetes:
             continue
@@ -150,23 +150,28 @@ def execution_job():
         titre = row.get("title", "Sans titre")
         raw_site = row.get("site", "Autre")
         source_plateforme = str(raw_site).capitalize() if raw_site else "Autre"
+        description_job = str(row.get("description", "")).strip()
+
+        if not description_job or description_job.lower() == "nan":
+            description_job = f"Poste de {titre} chez {entreprise}."
 
         print(f"🤖 Analyse MatchCraft : '{titre}' chez {entreprise} ({source_plateforme})...")
 
         offre_dict = {
             "company": entreprise,
             "title": titre,
-            "description": str(row.get("description", "")),
+            "description": description_job,
+            "url": job_id,
         }
 
-        # Pipeline LLM (Matching + Rédaction)
+        # Pipeline LLM (Matching + Storytelling + Lettre)
         analyse = analyser_et_rediger(
             offre=offre_dict,
-            portfolio=portfolio_texte,
-            github=github_texte,
-            cv=cv_texte,
+            cv_texte=cv_texte,
+            portfolio_texte=portfolio_texte,
+            github_texte=github_texte,
         )
-        score = analyse.get("score_adequation", 0) if analyse else 0
+        score = analyse.get("score_adequation", 0) if isinstance(analyse, dict) else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
             resultat = {
@@ -176,7 +181,13 @@ def execution_job():
                 "url": job_id,
                 "source": source_plateforme,
                 "date_ajout": datetime.now().isoformat(),
-                "analyse": analyse,
+                "statut": "A postuler",
+                "score_adequation": score,
+                "description": description_job,
+                "besoin_cle_entreprise": analyse.get("besoin_cle_entreprise", "Non spécifié"),
+                "preuve_technique_citee": analyse.get("preuve_technique_citee", "Aucune"),
+                "points_forts": analyse.get("points_forts", []),
+                "lettre_motivation": analyse.get("lettre_motivation", ""),
             }
             historique.append(resultat)
             ids_connus.add(job_id)
@@ -187,14 +198,12 @@ def execution_job():
 
         time.sleep(random.uniform(1, 2))
 
+    # Sauvegarde locale finale
     sauvegarder_historique(historique)
     sauvegarder_ids_rejetes(ids_rejetes)
-    print("\n✅ [MatchCraft AI] Synchronisation de la base terminée avec succès !")
+    print("\n✅ [MatchCraft AI] Enregistrement local terminé avec succès !")
 
 
-# ==========================================
-# POINT D'ENTRÉE
-# ==========================================
 if __name__ == "__main__":
     print("⚡ Démarrage du moteur MatchCraft AI...")
     execution_job()
