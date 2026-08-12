@@ -3,7 +3,7 @@ name: MatchCraft AI - Cron
 on:
   schedule:
     # 08:30 / 12:30 / 15:30 / 18:30 heure de Paris ≈ 06:30 / 10:30 / 13:30 / 16:30 UTC (CEST, été)
-    # ⚠️ décalage de -1h en hiver (CET) — GitHub Actions ne gère pas le fuseau automatiquement
+    # décalage de -1h en hiver (CET) — GitHub Actions ne gère pas le fuseau automatiquement
     - cron: "30 6,10,13,16 * * *"
   workflow_dispatch:  # permet de lancer manuellement depuis l'onglet Actions
 
