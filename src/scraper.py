@@ -1,4 +1,3 @@
-# src/scraper.py
 import time
 import random
 import requests
