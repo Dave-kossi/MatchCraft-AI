@@ -7,18 +7,16 @@ HEADERS = {
     "Accept": "application/json, text/plain, */*"
 }
 
-# Utilisé par main.py quand aucune liste de mots-clés n'est fournie explicitement
 MOTS_CLES_PAR_DEFAUT = [
-    "Data Stage",
-    "Data Scientist",
-    "Machine Learning",
+    "Stage Data Scientist", "Alternance Data Scientist",
+    "Stage Data Science", "Alternance Data Science",
+    "Stage Machine Learning", "Alternance Machine Learning",
 ]
 
-# NOTE : Eiffage, Safran, EDF pas encore ajoutés — pas d'endpoint interne confirmé.
-# Méthode pour les ajouter : F12 sur la page carrières → onglet Réseau → repérer
-# l'appel XHR/Fetch qui retourne du JSON, puis dupliquer un des blocs ci-dessous.
 
-
+# ==========================================
+# SOURCES OPÉRATIONNELLES — endpoint identifié et testé
+# ==========================================
 def _requete_airbus(mot_cle: str, limite: int) -> list:
     offres = []
     try:
@@ -27,10 +25,8 @@ def _requete_airbus(mot_cle: str, limite: int) -> list:
         if res.status_code == 200:
             for job in res.json().get('jobs', []):
                 offres.append({
-                    "site": "Airbus Careers",
-                    "company": "Airbus",
-                    "title": job.get('title'),
-                    "location": job.get('location', 'France'),
+                    "site": "Airbus Careers", "company": "Airbus",
+                    "title": job.get('title'), "location": job.get('location', 'France'),
                     "description": job.get('description', 'Voir offre sur le site Airbus'),
                     "job_url": job.get('url')
                 })
@@ -47,17 +43,14 @@ def _requete_thales(mot_cle: str, limite: int) -> list:
         url = "https://thales.wd3.myworkdayjobs.com/wday/cxs/thales/Careers/jobs"
         payload = {
             "appliedFacets": {"locationCountry": ["f2e609fc29784ca1b80f12713d16f06d"]},
-            "limit": limite,
-            "searchText": mot_cle
+            "limit": limite, "searchText": mot_cle
         }
         res = requests.post(url, json=payload, headers=HEADERS, timeout=10)
         if res.status_code == 200:
             for job in res.json().get('jobPostings', []):
                 offres.append({
-                    "site": "Thales Workday",
-                    "company": "Thales",
-                    "title": job.get('title'),
-                    "location": job.get('locationHierarchy', 'France'),
+                    "site": "Thales Workday", "company": "Thales",
+                    "title": job.get('title'), "location": job.get('locationHierarchy', 'France'),
                     "description": f"Poste chez Thales : {job.get('title')}",
                     "job_url": "https://thales.wd3.myworkdayjobs.com/en-US/Careers" + job.get('externalPath', '')
                 })
@@ -76,10 +69,8 @@ def _requete_sg(mot_cle: str, limite: int) -> list:
         if res.status_code == 200:
             for job in res.json().get('offers', []):
                 offres.append({
-                    "site": "Société Générale Careers",
-                    "company": "Société Générale",
-                    "title": job.get('title'),
-                    "location": job.get('city', 'France'),
+                    "site": "Société Générale Careers", "company": "Société Générale",
+                    "title": job.get('title'), "location": job.get('city', 'France'),
                     "description": job.get('summary', '') or job.get('title'),
                     "job_url": f"https://careers.societegenerale.com/offres-d-emploi/{job.get('slug', '')}"
                 })
@@ -98,10 +89,8 @@ def _requete_bnp(mot_cle: str, limite: int) -> list:
         if res.status_code == 200:
             for job in res.json().get('content', []):
                 offres.append({
-                    "site": "BNP Paribas Careers",
-                    "company": "BNP Paribas",
-                    "title": job.get('name'),
-                    "location": job.get('location', {}).get('city', 'France'),
+                    "site": "BNP Paribas Careers", "company": "BNP Paribas",
+                    "title": job.get('name'), "location": job.get('location', {}).get('city', 'France'),
                     "description": f"Offre BNP Paribas : {job.get('name')}",
                     "job_url": f"https://jobs.smartrecruiters.com/BNPParibas/{job.get('id')}"
                 })
@@ -112,22 +101,78 @@ def _requete_bnp(mot_cle: str, limite: int) -> list:
     return offres
 
 
+SOURCES_OPERATIONNELLES = [_requete_airbus, _requete_thales, _requete_sg, _requete_bnp]
+
+
+# ==========================================
+# SOURCES À INTÉGRER — endpoint non identifié.
+#
+# Méthode pour compléter une entrée : ouvrir "url_carriere" dans le
+# navigateur → F12 → onglet Réseau → filtrer "Fetch/XHR" → lancer une
+# recherche sur le site → repérer l'appel qui retourne du JSON avec la
+# liste d'offres → écrire une fonction _requete_xxx() sur le modèle des
+# 4 ci-dessus → l'ajouter à SOURCES_OPERATIONNELLES.
+#
+# Ce backlog sert aussi de feuille de route pour un futur contributeur
+# open-source : chaque ligne est une source prête à être branchée.
+# ==========================================
+SOURCES_A_INTEGRER = [
+    # Banque
+    {"nom": "TotalEnergies", "secteur": "Énergie", "url_carriere": "https://jobs.totalenergies.com"},
+    {"nom": "ENGIE", "secteur": "Énergie", "url_carriere": "https://jobs.engie.com"},
+    {"nom": "EDF / Enedis", "secteur": "Énergie", "url_carriere": "https://www.edf.fr/edf-recrute"},
+    {"nom": "Veolia", "secteur": "Énergie", "url_carriere": "https://www.veolia.com/fr/carrieres"},
+    {"nom": "Suez", "secteur": "Énergie", "url_carriere": "https://www.suez.com/fr/carrieres"},
+
+    {"nom": "Renault Group", "secteur": "Industrie", "url_carriere": "https://www.renaultgroup.com/carrieres/"},
+    {"nom": "Safran", "secteur": "Industrie", "url_carriere": "https://www.safran-group.com/fr/carrieres"},
+    {"nom": "Dassault Systèmes", "secteur": "Industrie", "url_carriere": "https://www.3ds.com/fr/careers"},
+    {"nom": "Alstom", "secteur": "Industrie", "url_carriere": "https://www.alstom.com/fr/carrieres"},
+    {"nom": "Saint-Gobain", "secteur": "Industrie", "url_carriere": "https://www.saint-gobain.com/fr/carrieres"},
+    {"nom": "Schneider Electric", "secteur": "Industrie", "url_carriere": "https://www.se.com/fr/fr/about-us/careers/"},
+    {"nom": "Michelin", "secteur": "Industrie", "url_carriere": "https://carrieres.michelin.fr"},
+    {"nom": "Air Liquide", "secteur": "Industrie", "url_carriere": "https://www.airliquide.com/fr/carrieres"},
+
+    {"nom": "Crédit Agricole", "secteur": "Banque", "url_carriere": "https://groupecreditagricole.jobs"},
+    {"nom": "BPCE / Natixis", "secteur": "Banque", "url_carriere": "https://www.groupebpce.com/carrieres"},
+    {"nom": "Crédit Mutuel", "secteur": "Banque", "url_carriere": "https://www.creditmutuel.com/fr/emploi.html"},
+    {"nom": "La Banque Postale", "secteur": "Banque", "url_carriere": "https://www.labanquepostale.com/carrieres.html"},
+
+    {"nom": "AXA", "secteur": "Assurance", "url_carriere": "https://www.axa.fr/carrieres"},
+    {"nom": "Allianz France", "secteur": "Assurance", "url_carriere": "https://www.allianz.fr/carrieres"},
+    {"nom": "Generali France", "secteur": "Assurance", "url_carriere": "https://www.generali.fr/carrieres"},
+    {"nom": "Covéa (MAAF/MMA/GMF)", "secteur": "Assurance", "url_carriere": "https://www.covea.eu/fr/carrieres"},
+    {"nom": "MAIF", "secteur": "Assurance", "url_carriere": "https://www.maif.fr/recrutement.html"},
+    {"nom": "Groupama", "secteur": "Assurance", "url_carriere": "https://www.groupama.com/fr/carrieres/"},
+]
+
+
+def lister_sources_a_completer():
+    """Affiche le backlog de sources non encore intégrées, groupé par secteur —
+    utile pour prioriser la prochaine source à reverse-engineer."""
+    par_secteur = {}
+    for s in SOURCES_A_INTEGRER:
+        par_secteur.setdefault(s["secteur"], []).append(s["nom"])
+    for secteur, noms in par_secteur.items():
+        print(f"\n{secteur} ({len(noms)} sources à intégrer) :")
+        for nom in noms:
+            print(f"  - {nom}")
+
+
 def collecter_offres_grands_groupes(mots_cles: list = None, limite: int = 5) -> list:
     """
-    Interroge les endpoints carrières publics des grands groupes pour
-    chaque mot-clé fourni. Retourne une liste dédupliquée sur job_url.
+    Interroge les endpoints carrières publics des grands groupes déjà
+    intégrés (voir SOURCES_OPERATIONNELLES) pour chaque mot-clé fourni.
+    Retourne une liste dédupliquée sur job_url.
     """
     mots_cles = mots_cles or MOTS_CLES_PAR_DEFAUT
     offres_totales = []
 
     for mot_cle in mots_cles:
-        offres_totales += _requete_airbus(mot_cle, limite)
-        offres_totales += _requete_thales(mot_cle, limite)
-        offres_totales += _requete_sg(mot_cle, limite)
-        offres_totales += _requete_bnp(mot_cle, limite)
-        time.sleep(0.5)  # pause légère entre chaque mot-clé
+        for fonction_source in SOURCES_OPERATIONNELLES:
+            offres_totales += fonction_source(mot_cle, limite)
+        time.sleep(0.5)
 
-    # Dédoublonnage sur job_url
     vues = set()
     offres_uniques = []
     for o in offres_totales:
@@ -137,3 +182,9 @@ def collecter_offres_grands_groupes(mots_cles: list = None, limite: int = 5) -> 
             offres_uniques.append(o)
 
     return offres_uniques
+
+
+if __name__ == "__main__":
+    # Exécuter ce fichier seul affiche le backlog — pratique pour choisir
+    # la prochaine source à reverse-engineer sans fouiller le code.
+    lister_sources_a_completer()
