@@ -15,9 +15,40 @@ MOTS_CLES_PAR_DEFAUT = [
 
 
 # ==========================================
-# SOURCES OPÉRATIONNELLES — endpoint identifié et testé
+# SOURCE OPÉRATIONNELLE — confirmée en fonctionnement
+# ==========================================
+def _requete_bnp(mot_cle: str, limite: int) -> list:
+    offres = []
+    try:
+        url = f"https://api.smartrecruiters.com/v1/companies/BNPParibas/postings?q={mot_cle}&limit={limite}"
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        if res.status_code == 200:
+            for job in res.json().get('content', []):
+                offres.append({
+                    "site": "BNP Paribas Careers", "company": "BNP Paribas",
+                    "title": job.get('name'), "location": job.get('location', {}).get('city', 'France'),
+                    "description": f"Offre BNP Paribas : {job.get('name')}",
+                    "job_url": f"https://jobs.smartrecruiters.com/BNPParibas/{job.get('id')}"
+                })
+        else:
+            print(f"⚠️ BNP Paribas status {res.status_code}")
+    except Exception as e:
+        print(f"⚠️ Erreur BNP Paribas : {e}")
+    return offres
+
+
+SOURCES_OPERATIONNELLES = [_requete_bnp]
+
+
+# ==========================================
+# SOURCES EN PAUSE — code gardé pour référence, retiré du pipeline actif
+# suite aux échecs constatés le [date du run]. Diagnostic déjà posé,
+# à corriger dès que l'endpoint réel est reconfirmé manuellement.
 # ==========================================
 def _requete_airbus(mot_cle: str, limite: int) -> list:
+    """EN PAUSE — ag.jobs2web.com ne se résout plus en DNS (échec de résolution,
+    pas un blocage HTTP). Soit Airbus a changé de prestataire ATS, soit c'est un
+    souci réseau local. À vérifier manuellement avant de réactiver."""
     offres = []
     try:
         url = f"https://ag.jobs2web.com/api/search?q={mot_cle}&locationFacet=France&pageSize={limite}"
@@ -38,6 +69,9 @@ def _requete_airbus(mot_cle: str, limite: int) -> list:
 
 
 def _requete_thales(mot_cle: str, limite: int) -> list:
+    """EN PAUSE — status 400. L'ID de facette locationCountry codé en dur
+    n'est probablement plus valide (ces IDs Workday changent par tenant/mise
+    à jour). À recapturer via F12 sur une recherche réelle avant réactivation."""
     offres = []
     try:
         url = "https://thales.wd3.myworkdayjobs.com/wday/cxs/thales/Careers/jobs"
@@ -62,6 +96,9 @@ def _requete_thales(mot_cle: str, limite: int) -> list:
 
 
 def _requete_sg(mot_cle: str, limite: int) -> list:
+    """EN PAUSE — status 404. La route /api/offers n'existe plus telle quelle,
+    Société Générale a probablement changé son endpoint interne. À retrouver
+    via F12 avant réactivation."""
     offres = []
     try:
         url = f"https://careers.societegenerale.com/api/offers?keywords={mot_cle}&languages=fr&limit={limite}"
@@ -81,43 +118,15 @@ def _requete_sg(mot_cle: str, limite: int) -> list:
     return offres
 
 
-def _requete_bnp(mot_cle: str, limite: int) -> list:
-    offres = []
-    try:
-        url = f"https://api.smartrecruiters.com/v1/companies/BNPParibas/postings?q={mot_cle}&limit={limite}"
-        res = requests.get(url, headers=HEADERS, timeout=10)
-        if res.status_code == 200:
-            for job in res.json().get('content', []):
-                offres.append({
-                    "site": "BNP Paribas Careers", "company": "BNP Paribas",
-                    "title": job.get('name'), "location": job.get('location', {}).get('city', 'France'),
-                    "description": f"Offre BNP Paribas : {job.get('name')}",
-                    "job_url": f"https://jobs.smartrecruiters.com/BNPParibas/{job.get('id')}"
-                })
-        else:
-            print(f"⚠️ BNP Paribas status {res.status_code}")
-    except Exception as e:
-        print(f"⚠️ Erreur BNP Paribas : {e}")
-    return offres
-
-
-SOURCES_OPERATIONNELLES = [_requete_airbus, _requete_thales, _requete_sg, _requete_bnp]
-
-
 # ==========================================
-# SOURCES À INTÉGRER — endpoint non identifié.
+# SOURCES À INTÉGRER — endpoint jamais identifié.
 #
-# Méthode pour compléter une entrée : ouvrir "url_carriere" dans le
-# navigateur → F12 → onglet Réseau → filtrer "Fetch/XHR" → lancer une
-# recherche sur le site → repérer l'appel qui retourne du JSON avec la
-# liste d'offres → écrire une fonction _requete_xxx() sur le modèle des
-# 4 ci-dessus → l'ajouter à SOURCES_OPERATIONNELLES.
-#
-# Ce backlog sert aussi de feuille de route pour un futur contributeur
-# open-source : chaque ligne est une source prête à être branchée.
+# Méthode : ouvrir "url_carriere" → F12 → onglet Réseau → filtrer "Fetch/XHR"
+# → lancer une recherche sur le site → repérer l'appel qui retourne du JSON
+# avec la liste d'offres → écrire une fonction _requete_xxx() sur le modèle
+# de _requete_bnp() → l'ajouter à SOURCES_OPERATIONNELLES.
 # ==========================================
 SOURCES_A_INTEGRER = [
-    # Banque
     {"nom": "TotalEnergies", "secteur": "Énergie", "url_carriere": "https://jobs.totalenergies.com"},
     {"nom": "ENGIE", "secteur": "Énergie", "url_carriere": "https://jobs.engie.com"},
     {"nom": "EDF / Enedis", "secteur": "Énergie", "url_carriere": "https://www.edf.fr/edf-recrute"},
@@ -148,8 +157,7 @@ SOURCES_A_INTEGRER = [
 
 
 def lister_sources_a_completer():
-    """Affiche le backlog de sources non encore intégrées, groupé par secteur —
-    utile pour prioriser la prochaine source à reverse-engineer."""
+    """Affiche le backlog de sources non encore intégrées, groupé par secteur."""
     par_secteur = {}
     for s in SOURCES_A_INTEGRER:
         par_secteur.setdefault(s["secteur"], []).append(s["nom"])
@@ -157,12 +165,13 @@ def lister_sources_a_completer():
         print(f"\n{secteur} ({len(noms)} sources à intégrer) :")
         for nom in noms:
             print(f"  - {nom}")
+    print(f"\nEn pause (code gardé, désactivé) : Airbus, Thales, Société Générale")
 
 
 def collecter_offres_grands_groupes(mots_cles: list = None, limite: int = 5) -> list:
     """
-    Interroge les endpoints carrières publics des grands groupes déjà
-    intégrés (voir SOURCES_OPERATIONNELLES) pour chaque mot-clé fourni.
+    Interroge les endpoints carrières publics des grands groupes actuellement
+    opérationnels (voir SOURCES_OPERATIONNELLES) pour chaque mot-clé fourni.
     Retourne une liste dédupliquée sur job_url.
     """
     mots_cles = mots_cles or MOTS_CLES_PAR_DEFAUT
@@ -185,6 +194,4 @@ def collecter_offres_grands_groupes(mots_cles: list = None, limite: int = 5) -> 
 
 
 if __name__ == "__main__":
-    # Exécuter ce fichier seul affiche le backlog — pratique pour choisir
-    # la prochaine source à reverse-engineer sans fouiller le code.
     lister_sources_a_completer()
