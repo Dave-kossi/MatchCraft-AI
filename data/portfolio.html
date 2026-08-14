@@ -120,6 +120,15 @@
   .impact-text{font-size:0.9rem;color:var(--ink-soft);line-height:1.55;}
   .impact-text strong{color:var(--ink);font-weight:600;}
   @media(max-width:600px){.case-impact{grid-template-columns:1fr;gap:6px;}}
+
+  /* POUR QUI — répartition par audience, pour les projets où ça éclaire vraiment l'usage */
+  .case-usage{grid-column:1 / -1;margin-top:6px;padding:16px 18px;background:var(--bg-raised);border-left:2px solid var(--accent);border-radius:2px;}
+  .case.energy .case-usage{border-left-color:var(--violet);}
+  .usage-label{display:block;font-family:var(--mono);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent);margin-bottom:10px;}
+  .case.energy .usage-label{color:var(--violet);}
+  .usage-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+  .usage-list li{font-size:0.88rem;color:var(--ink-soft);line-height:1.5;}
+  .usage-list li strong{color:var(--ink);font-weight:600;}
   @media(max-width:880px){.case{grid-template-columns:1fr;gap:16px;}.case-index{padding-top:0;}}
 
   /* RAG SHOWCASE */
@@ -226,21 +235,21 @@
 
   <div class="ticker-strip">
     <div class="ticker-track">
-      <div class="ticker-item"><span class="ticker-num">99.7%</span><span class="ticker-label">précision détection de fraude bancaire</span></div>
+      <div class="ticker-item"><span class="ticker-num">99.7%</span><span class="ticker-label">précision — détection de fraude bancaire</span></div>
       <div class="ticker-item"><span class="ticker-num">−62%</span><span class="ticker-label">pertes financières simulées</span></div>
-      <div class="ticker-item"><span class="ticker-num">3.8×</span><span class="ticker-label">facteur de risque scoring assurance</span></div>
-      <div class="ticker-item"><span class="ticker-num">95%</span><span class="ticker-label">intervalle de confiance projections énergie 2050</span></div>
-      <div class="ticker-item"><span class="ticker-num">763</span><span class="ticker-label">chunks indexés corpus VentiRE</span></div>
-      <div class="ticker-item"><span class="ticker-num">4×/jour</span><span class="ticker-label">veille automatisée MatchCraft AI</span></div>
-      <div class="ticker-item"><span class="ticker-num">−42%</span><span class="ticker-label">erreur L2 PINNs système de Lorenz</span></div>
+      <div class="ticker-item"><span class="ticker-num">3.8×</span><span class="ticker-label">facteur de risque — scoring assurance</span></div>
+      <div class="ticker-item"><span class="ticker-num">95%</span><span class="ticker-label">intervalle de confiance — projections énergie 2050</span></div>
+      <div class="ticker-item"><span class="ticker-num">763</span><span class="ticker-label">chunks indexés — corpus VentiRE</span></div>
+      <div class="ticker-item"><span class="ticker-num">4×/jour</span><span class="ticker-label">veille automatisée — MatchCraft AI</span></div>
+      <div class="ticker-item"><span class="ticker-num">−42%</span><span class="ticker-label">erreur L2 — PINNs système de Lorenz</span></div>
       <!-- duplicate pour le défilement continu -->
-      <div class="ticker-item"><span class="ticker-num">99.7%</span><span class="ticker-label">précision détection de fraude bancaire</span></div>
+      <div class="ticker-item"><span class="ticker-num">99.7%</span><span class="ticker-label">précision — détection de fraude bancaire</span></div>
       <div class="ticker-item"><span class="ticker-num">−62%</span><span class="ticker-label">pertes financières simulées</span></div>
-      <div class="ticker-item"><span class="ticker-num">3.8×</span><span class="ticker-label">facteur de risque scoring assurance</span></div>
-      <div class="ticker-item"><span class="ticker-num">95%</span><span class="ticker-label">intervalle de confiance projections énergie 2050</span></div>
-      <div class="ticker-item"><span class="ticker-num">763</span><span class="ticker-label">chunks indexés corpus VentiRE</span></div>
-      <div class="ticker-item"><span class="ticker-num">4×/jour</span><span class="ticker-label">veille automatisée MatchCraft AI</span></div>
-      <div class="ticker-item"><span class="ticker-num">−42%</span><span class="ticker-label">erreur L2 PINNs système de Lorenz</span></div>
+      <div class="ticker-item"><span class="ticker-num">3.8×</span><span class="ticker-label">facteur de risque — scoring assurance</span></div>
+      <div class="ticker-item"><span class="ticker-num">95%</span><span class="ticker-label">intervalle de confiance — projections énergie 2050</span></div>
+      <div class="ticker-item"><span class="ticker-num">763</span><span class="ticker-label">chunks indexés — corpus VentiRE</span></div>
+      <div class="ticker-item"><span class="ticker-num">4×/jour</span><span class="ticker-label">veille automatisée — MatchCraft AI</span></div>
+      <div class="ticker-item"><span class="ticker-num">−42%</span><span class="ticker-label">erreur L2 — PINNs système de Lorenz</span></div>
     </div>
   </div>
 </section>
@@ -252,7 +261,7 @@
         <div class="section-num">01 — Profil</div>
         <h2>Mathématicien de formation, data scientist par vocation</h2>
       </div>
-      <div class="section-note">À l'interface entre la rigueur de la modélisation mathématique et l'IA appliquée.</div>
+      <div class="section-note">À l'interface entre la rigueur de la modélisation statistique et l'IA générative appliquée.</div>
     </div>
     <div class="about-grid">
       <div class="about-text reveal">
@@ -262,8 +271,8 @@
           détection de fraude bancaire, scoring de risque, systèmes RAG/LLM et transition énergétique.
         </p>
         <p>
-          Mon parcours en mathématiques appliquées chaînes de Markov, équations différentielles, réseaux de neurones
-          informés par la physique et d`autres me donne une base théorique que j'applique systématiquement à des cas d'usage concrets.
+          Mon parcours en mathématiques appliquées — chaînes de Markov, équations différentielles, réseaux de neurones
+          informés par la physique — me donne une base théorique que j'applique systématiquement à des cas d'usage concrets.
           Je mesure ce que je construis plutôt que de supposer que ça marche.
         </p>
         <p>
@@ -320,65 +329,18 @@
         <div class="section-num">02 — Projets</div>
         <h2>De la recherche académique à l'impact métier</h2>
       </div>
-      <div class="section-note">Neuf projets, trois fils conducteurs : finance &amp; risque, énergie &amp; industrie, data engineering &amp; agents IA.</div>
+      <div class="section-note">Neuf projets, trois fils conducteurs : finance &amp; risque, énergie &amp; industrie, data engineering &amp; automatisation LLM.</div>
     </div>
 
-    <!-- PROJET 01 -->
-    <div class="case finance">
-      <div class="case-index reveal"><span class="fig-label">Fig.</span>01</div>
-      <div class="reveal">
-        <span class="case-tag">Finance · Risque</span>
-        <h3>Détection de fraude bancaire optimisée</h3>
-        <p class="case-desc">Architecture ML pour détecter les transactions frauduleuses omnicanales en temps réel, minimisant les pertes financières sans pénaliser l'expérience client. Benchmarking Logistic Regression, Random Forest, XGBoost, LightGBM — validation 5-fold cross-validation, interprétabilité XAI.</p>
-        <div class="case-stack">Python · LightGBM · XGBoost · Scikit-learn · XAI</div>
-        <div class="case-links">
-          <a href="https://github.com/Dave-kossi/bank-transaction-fraud-detection" target="_blank" rel="noopener">Code GitHub →</a>
-        </div>
-      </div>
-      <div class="case-stats reveal">
-        <div class="stat-row"><span class="num">99.7%</span><span class="desc">précision (faux positifs minimisés)</span></div>
-        <div class="stat-row"><span class="num">62.0%</span><span class="desc">rappel sur fraudes complexes</span></div>
-        <div class="stat-row"><span class="num">−62%</span><span class="desc">pertes simulées sur 10 000 transactions</span></div>
-      </div>
-      <div class="case-impact reveal">
-        <span class="impact-label">Lecture décideur</span>
-        <p class="impact-text">Chaque fraude bloquée à tort est un client mécontent, chaque fraude non détectée est une perte sèche. Ce modèle <strong>réduit les pertes sans pénaliser l'expérience client</strong> — transposable directement à un système de surveillance en production.</p>
-      </div>
-    </div>
-
-    <!-- PROJET 02 -->
-    <div class="case finance">
-      <div class="case-index reveal"><span class="fig-label">Fig.</span>02</div>
-      <div class="reveal">
-        <span class="case-tag">Finance · Assurance</span>
-        <h3>Insurance Risk Intelligence &amp; Predictive Pricing</h3>
-        <p class="case-desc">Plateforme de tarification dynamique transformant données démographiques et comportementales en stratégie de pricing actuariel. Score de risque propriétaire "Risk-Pulse" formalisant l'impact non-linéaire des facteurs combinés.</p>
-        <div class="case-stack">Python · Scikit-learn · Streamlit · Scoring actuariel</div>
-        <div class="case-links">
-          <a href="https://predictive-analysis-g7zjxrbuf79tfb3aolobma.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
-          <a href="https://github.com/Dave-kossi/healthcare-cost-analysis" target="_blank" rel="noopener">Code GitHub →</a>
-        </div>
-      </div>
-      <div class="case-stats reveal">
-        <div class="stat-row"><span class="num">3.8×</span><span class="desc">surcharge — tabagisme + obésité (BMI≥30)</span></div>
-        <div class="stat-row"><span class="num">+35%</span><span class="desc">surprime maximale appliquée</span></div>
-        <div class="stat-row"><span class="num">−20%</span><span class="desc">bonus pour profils à faible risque</span></div>
-      </div>
-      <div class="case-impact reveal">
-        <span class="impact-label">Lecture décideur</span>
-        <p class="impact-text">Un assureur qui tarife mal perd sur les profils risqués et perd des clients sur les profils sains. Ce moteur <strong>ajuste la prime au risque réel de chaque assuré</strong>, améliorant le ratio de sinistralité tout en restant compétitif.</p>
-      </div>
-    </div>
-
-    <!-- PROJET 03 — VentiRE -->
+    <!-- PROJET 01 — VentiRE -->
     <div class="case energy">
-      <div class="case-index reveal"><span class="fig-label">Fig.</span>03</div>
+      <div class="case-index reveal"><span class="fig-label">Fig.</span>01</div>
       <div class="reveal">
         <span class="case-tag energy">Énergie · IA réglementaire</span>
         <h3>VentiRE — Copilote RAG pour la réglementation ventilation</h3>
         <p class="case-desc">
           Système RAG 100% local permettant d'interroger en langage naturel six documents réglementaires
-          du secteur du bâtiment en France RE2020, arrêtés ventilation résidentiel et ERP, réglementation
+          du secteur du bâtiment en France — RE2020, arrêtés ventilation résidentiel et ERP, réglementation
           qualité de l'air intérieur. Pipeline complet : parsing PDF structuré, indexation hybride,
           reranking sémantique, génération augmentée, export PDF de session.
           <strong>Cinq bugs réels identifiés et corrigés</strong> : un argument de maturité technique
@@ -416,7 +378,7 @@
         <div id="tab-demo" class="rag-panel active">
           <div class="rag-qa">
             <div class="rag-q">Quel est le débit minimal en cuisine pour un T3 neuf RE2020 vs un T3 existant ?</div>
-            <div class="rag-a">Pour un T3 <strong>neuf RE2020</strong> (3 pièces principales) : 45 m³/h selon l'arrêté du 24 mars 1982. Pour un T3 <strong>existant</strong> : le décret de décence 2002 impose la présence d'un dispositif de ventilation conforme mais n'exprime pas de débit minimal chiffré à l'identique la réglementation applicable dépend du type de logement et de sa date de construction.</div>
+            <div class="rag-a">Pour un T3 <strong>neuf RE2020</strong> (3 pièces principales) : 45 m³/h selon l'arrêté du 24 mars 1982. Pour un T3 <strong>existant</strong> : le décret de décence 2002 impose la présence d'un dispositif de ventilation conforme mais n'exprime pas de débit minimal chiffré à l'identique — la réglementation applicable dépend du type de logement et de sa date de construction.</div>
             <div class="rag-source">Arrêté du 24 mars 1982 · Décret n°2002-120 du 31 janvier 2002 <span class="rag-badge">residentiel_neuf</span></div>
           </div>
           <div class="rag-qa">
@@ -493,6 +455,53 @@
       </div>
     </div>
 
+    <!-- PROJET 02 -->
+    <div class="case finance">
+      <div class="case-index reveal"><span class="fig-label">Fig.</span>02</div>
+      <div class="reveal">
+        <span class="case-tag">Finance · Risque</span>
+        <h3>Détection de fraude bancaire optimisée</h3>
+        <p class="case-desc">Architecture ML pour détecter les transactions frauduleuses omnicanales en temps réel, minimisant les pertes financières sans pénaliser l'expérience client. Benchmarking Logistic Regression, Random Forest, XGBoost, LightGBM — validation 5-fold cross-validation, interprétabilité XAI.</p>
+        <div class="case-stack">Python · LightGBM · XGBoost · Scikit-learn · XAI</div>
+        <div class="case-links">
+          <a href="https://github.com/Dave-kossi/bank-transaction-fraud-detection" target="_blank" rel="noopener">Code GitHub →</a>
+        </div>
+      </div>
+      <div class="case-stats reveal">
+        <div class="stat-row"><span class="num">99.7%</span><span class="desc">précision (faux positifs minimisés)</span></div>
+        <div class="stat-row"><span class="num">62.0%</span><span class="desc">rappel sur fraudes complexes</span></div>
+        <div class="stat-row"><span class="num">−62%</span><span class="desc">pertes simulées sur 10 000 transactions</span></div>
+      </div>
+      <div class="case-impact reveal">
+        <span class="impact-label">Lecture décideur</span>
+        <p class="impact-text">Chaque fraude bloquée à tort est un client mécontent, chaque fraude non détectée est une perte sèche. Ce modèle <strong>réduit les pertes sans pénaliser l'expérience client</strong> — transposable directement à un système de surveillance en production.</p>
+      </div>
+    </div>
+
+    <!-- PROJET 03 -->
+    <div class="case finance">
+      <div class="case-index reveal"><span class="fig-label">Fig.</span>03</div>
+      <div class="reveal">
+        <span class="case-tag">Finance · Assurance</span>
+        <h3>Insurance Risk Intelligence &amp; Predictive Pricing</h3>
+        <p class="case-desc">Plateforme de tarification dynamique transformant données démographiques et comportementales en stratégie de pricing actuariel. Score de risque propriétaire "Risk-Pulse" formalisant l'impact non-linéaire des facteurs combinés.</p>
+        <div class="case-stack">Python · Scikit-learn · Streamlit · Scoring actuariel</div>
+        <div class="case-links">
+          <a href="https://predictive-analysis-g7zjxrbuf79tfb3aolobma.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
+          <a href="https://github.com/Dave-kossi/healthcare-cost-analysis" target="_blank" rel="noopener">Code GitHub →</a>
+        </div>
+      </div>
+      <div class="case-stats reveal">
+        <div class="stat-row"><span class="num">3.8×</span><span class="desc">surcharge — tabagisme + obésité (BMI≥30)</span></div>
+        <div class="stat-row"><span class="num">+35%</span><span class="desc">surprime maximale appliquée</span></div>
+        <div class="stat-row"><span class="num">−20%</span><span class="desc">bonus pour profils à faible risque</span></div>
+      </div>
+      <div class="case-impact reveal">
+        <span class="impact-label">Lecture décideur</span>
+        <p class="impact-text">Un assureur qui tarife mal perd sur les profils risqués et perd des clients sur les profils sains. Ce moteur <strong>ajuste la prime au risque réel de chaque assuré</strong>, améliorant le ratio de sinistralité tout en restant compétitif.</p>
+      </div>
+    </div>
+
     <!-- PROJET 04 -->
     <div class="case energy">
       <div class="case-index reveal"><span class="fig-label">Fig.</span>04</div>
@@ -537,28 +546,52 @@
         <span class="impact-label">Lecture décideur</span>
         <p class="impact-text">Un arrêt non planifié coûte bien plus qu'une maintenance anticipée. Ce modèle permet de <strong>passer d'une maintenance corrective à une maintenance prédictive</strong> — ciblée juste avant la panne, moins d'arrêts, moins de pièces changées trop tôt.</p>
       </div>
+      <div class="case-usage reveal">
+        <span class="usage-label">Pour qui</span>
+        <ul class="usage-list">
+          <li><strong>Responsables maintenance industrielle</strong> — anticipent les pannes plutôt que d'y réagir</li>
+          <li><strong>Ingénieurs fiabilité</strong> — disposent d'une estimation quantifiée de la durée de vie résiduelle pour planifier les interventions</li>
+          <li><strong>Direction de production</strong> — moins d'arrêts non planifiés, meilleure allocation du budget maintenance</li>
+        </ul>
+      </div>
     </div>
 
-    <!-- PROJET 06 -->
+    <!-- PROJET 06 — MatchCraft AI (nouveau) -->
     <div class="case">
       <div class="case-index reveal"><span class="fig-label">Fig.</span>06</div>
       <div class="reveal">
-        <span class="case-tag">Data Engineering · Temps réel</span>
-        <h3>VeloTrack Mulhouse — Collecte de données temps réel</h3>
-        <p class="case-desc">Collecteur automatique de données pour le réseau Vélostation de l'agglomération mulhousienne : capture en temps réel de l'état de toutes les stations via l'API GBFS de Nextbike, score de tension par station, archivage horodaté pour jeu de données ML.</p>
-        <div class="case-stack">Python · Streamlit · API GBFS · Pandas · Time Series</div>
+        <span class="case-tag">Automatisation · Pipeline LLM</span>
+        <h3>MatchCraft AI — Pipeline LLM de veille & candidature</h3>
+        <p class="case-desc">
+          Système qui scanne en continu plusieurs plateformes (jobboards, portails carrière de grands groupes)
+          à la recherche de stages et d'alternances en Data Science, Analytics, ML, LLM et AI Engineering,
+          puis rédige pour chaque offre pertinente une lettre de motivation personnalisée — ancrée dans le
+          CV, le portfolio et les projets GitHub du candidat, jamais générique. Pipeline LLM en trois étapes
+          orchestré par du code déterministe (extraction des besoins de l'entreprise, rédaction, auto-critique
+          avec régénération conditionnelle), automatisé via GitHub Actions et restitué dans un tableau de bord Streamlit.
+        </p>
+        <div class="case-stack">Python · Groq (LLM) · JobSpy · BeautifulSoup · Pandas · Streamlit · GitHub Actions</div>
         <div class="case-links">
-          <a href="https://biketrack-jq9uepdtfbywzdccc5tvim.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
-          <a href="https://github.com/Dave-kossi/Bike_Track" target="_blank" rel="noopener">Code GitHub →</a>
+          <a href="https://jobagent-pac826pfkjjno5tubszwmc.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
+          <a href="https://github.com/Dave-kossi/Job_Agent" target="_blank" rel="noopener">Code GitHub →</a>
         </div>
       </div>
       <div class="case-stats reveal">
-        <div class="stat-row"><span class="num">100%</span><span class="desc">stations de l'agglomération couvertes</span></div>
-        <div class="stat-row"><span class="num">3 niveaux</span><span class="desc">score de tension (urgence / tension / ok)</span></div>
+        <div class="stat-row"><span class="num">10</span><span class="desc">sources agrégées (jobboards + grands groupes)</span></div>
+        <div class="stat-row"><span class="num">3 étapes</span><span class="desc">extraction des besoins → rédaction → auto-critique</span></div>
+        <div class="stat-row"><span class="num">4×/jour</span><span class="desc">veille automatisée via cron GitHub Actions</span></div>
       </div>
       <div class="case-impact reveal">
         <span class="impact-label">Lecture décideur</span>
-        <p class="impact-text">Une station vide est un usager perdu. Ce pipeline <strong>identifie en temps réel les stations critiques</strong> et constitue l'historique nécessaire pour prédire les besoins de régulation — base d'un système de réallocation proactive.</p>
+        <p class="impact-text">Chercher un stage prend des heures : parcourir plusieurs sites, puis réécrire une lettre pour chaque entreprise. MatchCraft AI <strong>automatise la veille et ne rédige que sur preuve</strong> — chaque affirmation de la lettre doit être vérifiable dans les documents du candidat, jamais inventée.</p>
+      </div>
+      <div class="case-usage reveal">
+        <span class="usage-label">Pour qui</span>
+        <ul class="usage-list">
+          <li><strong>Étudiants &amp; jeunes diplômés</strong> — évite des heures de veille manuelle sur plusieurs sites et de rédaction répétitive de lettres</li>
+          <li><strong>Career centers / associations étudiantes</strong> — outil personnalisable et pensé open-source, à mettre à disposition d'une promotion entière</li>
+          <li><strong>Entreprises (vision miroir)</strong> — le même pipeline extraction/matching/auto-critique est transposable à la veille de marchés publics, exploré comme prolongement du projet</li>
+        </ul>
       </div>
     </div>
 
@@ -591,36 +624,44 @@
         <span class="impact-label">Lecture décideur</span>
         <p class="impact-text">Un Data Scientist passe jusqu'à 80% de son temps à préparer et nettoyer les données. Axiom <strong>automatise ce pipeline tout en guidant l'analyste avec un assistant IA ancré dans le contexte métier exact de ses données</strong> — le LLM ne répond pas de façon générique, il connaît la structure, les anomalies et le domaine du dataset chargé.</p>
       </div>
+      <div class="case-usage reveal">
+        <span class="usage-label">Pour qui</span>
+        <ul class="usage-list">
+          <li><strong>Data Scientists / Analysts</strong> — gagnent du temps sur le nettoyage et le profiling avant modélisation</li>
+          <li><strong>PME sans équipe data engineering dédiée</strong> — un pipeline de qualité de données clé en main, sans développement from scratch</li>
+          <li><strong>Formateurs en data science</strong> — support pédagogique pour illustrer concrètement les étapes de nettoyage et de profiling</li>
+        </ul>
+      </div>
     </div>
 
-    <!-- PROJET 08 — MatchCraft AI (nouveau) -->
+    <!-- PROJET 08 -->
     <div class="case">
       <div class="case-index reveal"><span class="fig-label">Fig.</span>08</div>
       <div class="reveal">
-        <span class="case-tag">Automatisation · Agents IA</span>
-        <h3>MatchCraft AI — Agent autonome de veille & candidature</h3>
-        <p class="case-desc">
-          Agent qui scanne en continu plusieurs plateformes (jobboards, portails carrière de grands groupes)
-          à la recherche de stages et d'alternances en Data Science, Analytics, ML, LLM et AI Engineering,
-          puis rédige pour chaque offre pertinente une lettre de motivation personnalisée — ancrée dans le
-          CV, le portfolio et les projets GitHub du candidat, jamais générique. Pipeline en trois étapes
-          (extraction des besoins de l'entreprise, rédaction, auto-critique avec regénération ciblée),
-          automatisé via GitHub Actions et restitué dans un tableau de bord Streamlit.
-        </p>
-        <div class="case-stack">Python · Groq (LLM) · JobSpy · BeautifulSoup · Pandas · Streamlit · GitHub Actions</div>
+        <span class="case-tag">Data Engineering · Temps réel</span>
+        <h3>VeloTrack Mulhouse — Collecte de données temps réel</h3>
+        <p class="case-desc">Collecteur automatique de données pour le réseau Vélostation de l'agglomération mulhousienne : capture en temps réel de l'état de toutes les stations via l'API GBFS de Nextbike, score de tension par station, archivage horodaté pour jeu de données ML.</p>
+        <div class="case-stack">Python · Streamlit · API GBFS · Pandas · Time Series</div>
         <div class="case-links">
-          <a href="https://jobagent-pac826pfkjjno5tubszwmc.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
-          <a href="https://github.com/Dave-kossi/Job_Agent" target="_blank" rel="noopener">Code GitHub →</a>
+          <a href="https://biketrack-jq9uepdtfbywzdccc5tvim.streamlit.app/" target="_blank" rel="noopener" class="demo">Démo live →</a>
+          <a href="https://github.com/Dave-kossi/Bike_Track" target="_blank" rel="noopener">Code GitHub →</a>
         </div>
       </div>
       <div class="case-stats reveal">
-        <div class="stat-row"><span class="num">10</span><span class="desc">sources agrégées (jobboards + grands groupes)</span></div>
-        <div class="stat-row"><span class="num">3 étapes</span><span class="desc">extraction des besoins → rédaction → auto-critique</span></div>
-        <div class="stat-row"><span class="num">4×/jour</span><span class="desc">veille automatisée via cron GitHub Actions</span></div>
+        <div class="stat-row"><span class="num">100%</span><span class="desc">stations de l'agglomération couvertes</span></div>
+        <div class="stat-row"><span class="num">3 niveaux</span><span class="desc">score de tension (urgence / tension / ok)</span></div>
       </div>
       <div class="case-impact reveal">
         <span class="impact-label">Lecture décideur</span>
-        <p class="impact-text">Chercher un stage prend des heures : parcourir plusieurs sites, puis réécrire une lettre pour chaque entreprise. MatchCraft AI <strong>automatise la veille et ne rédige que sur preuve</strong> — chaque affirmation de la lettre doit être vérifiable dans les documents du candidat, jamais inventée.</p>
+        <p class="impact-text">Une station vide est un usager perdu. Ce pipeline <strong>identifie en temps réel les stations critiques</strong> et constitue l'historique nécessaire pour prédire les besoins de régulation — base d'un système de réallocation proactive.</p>
+      </div>
+      <div class="case-usage reveal">
+        <span class="usage-label">Pour qui</span>
+        <ul class="usage-list">
+          <li><strong>Collectivités &amp; opérateurs de mobilité partagée</strong> — identifient en temps réel les stations à réguler en priorité</li>
+          <li><strong>Bureaux d'études mobilité / urbanistes</strong> — s'appuient sur l'historique horodaté pour dimensionner le réseau</li>
+          <li><strong>Futurs usagers</strong> — base technique d'une app de prédiction de disponibilité de vélos</li>
+        </ul>
       </div>
     </div>
 
@@ -713,7 +754,7 @@
         <div class="skill-block" style="margin-bottom:28px;">
           <h4>Certifications</h4>
           <div class="tag-cloud">
-            <span class="tag">ML Specialization DeepLearning.AI &amp; Stanford</span>
+            <span class="tag">ML Specialization — DeepLearning.AI &amp; Stanford</span>
             <span class="tag">Google Data Analytics Certificate</span>
             <span class="tag">AI in Fraud Detection</span>
           </div>
@@ -743,8 +784,8 @@
       <ul class="contact-list reveal">
         <li><a href="mailto:noumagnokossi0@gmail.com">noumagnokossi0@gmail.com</a></li>
         <li><a href="tel:+33745974382">+33 7 45 97 43 82</a></li>
-        <li><a href="https://www.linkedin.com/in/kossi-noumagno" target="_blank" rel="noopener">LinkedIn</a></li>
-        <li><a href="https://github.com/Dave-kossi" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/kossi-noumagno" target="_blank" rel="noopener">LinkedIn — in/kossi-noumagno</a></li>
+        <li><a href="https://github.com/Dave-kossi" target="_blank" rel="noopener">GitHub — Dave-kossi</a></li>
       </ul>
     </div>
   </div>
