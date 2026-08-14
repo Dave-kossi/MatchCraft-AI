@@ -58,7 +58,7 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
 
     TÂCHES :
     1. Identifie le secteur et l'enjeu principal de l'entreprise (ex: détection de fraude, optimisation RAG, Computer Vision, etc.).
-    2. Sélectionne les 2 PROJETS du candidat les plus pertinents par rapport à cet enjeu.
+    2. Sélectionne les 3 PROJETS du candidat les plus pertinents par rapport à cet enjeu.
     3. Extrais les compétences techniques et le vocabulaire métier exacts à réutiliser dans la lettre.
 
     Réponds UNIQUEMENT sous forme de JSON strict :
@@ -86,7 +86,7 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
             messages=[{"role": "user", "content": prompt}],
             model=MODEL_LEGER,
             temperature=0.2,
-            max_tokens=800,
+            max_tokens=850,
         )
         return json.loads(r.choices[0].message.content)
     except Exception as e:
@@ -123,7 +123,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
     CONSIGNES ET STRUCTURE DE RÉDACTION :
     1. Objet : Mentionner clairement l'intitulé du poste et la durée (ex: stage 6 mois).
     2. Accroche : Faire un lien direct entre le parcours du candidat et l'enjeu précis de l'entreprise.
-    3. Corps (Preuves & Projets) : Utiliser OBLIGATOIREMENT une liste à puces (•) pour détailler les 2 projets sélectionnés ci-dessus, avec leurs caractéristiques techniques (architectures, algorithmes, métriques, outils).
+    3. Corps (Preuves & Projets) : Utiliser OBLIGATOIREMENT une liste à puces (•) pour détailler les 3 projets sélectionnés ci-dessus, avec leurs caractéristiques techniques (architectures, algorithmes, métriques, outils).
     4. Projection Métier : Expliquer comment ces réalisations répondent concrètement aux défis décrits dans l'offre.
     5. Conclusion : Demande d'entretien directe et formule de politesse soignée.
 
@@ -150,7 +150,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
         ],
         model=MODEL_REDACTION,
         temperature=0.3,
-        max_tokens=2500,
+        max_tokens=2800,
         json_mode=False
     )
     return r.choices[0].message.content.strip()
@@ -214,7 +214,7 @@ def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github
             )
 
         nb_mots = len(lettre.split())
-        print(f"✅ Lettre adaptée générée ({nb_mots} mots).")
+        print(f" Lettre adaptée générée ({nb_mots} mots).")
 
         return {
             "score_adequation": int(matching.get("score_adequation", 0)),
