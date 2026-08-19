@@ -111,8 +111,8 @@ st.divider()
 # ONGLETS DE NAVIGATION
 # ==========================================
 tab_offres, tab_sources, tab_gestion = st.tabs([
-    f"🎯 Offres Qualifiées ({len(offres_filtrees)})", 
-    "📊 Provenance & Stats", 
+    f" Offres Qualifiées ({len(offres_filtrees)})", 
+    " Provenance & Stats", 
     "⚙️ Gestion & Nettoyage"
 ])
 
