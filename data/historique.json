@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "id": "https://www.linkedin.com/jobs/view/4428028690",
+    "title": "Data Engineer Intern (September 2026)",
+    "company": "Malt",
+    "url": "https://www.linkedin.com/jobs/view/4428028690",
+    "source": "Linkedin",
+    "date_ajout": "2026-08-20T12:32:11.695126",
+    "statut": "A postuler",
+    "score_adequation": 85,
+    "description": "Poste de Data Engineer Intern (September 2026) chez Malt.",
+    "besoin_cle_entreprise": "Malt recherche un Data Engineer Intern pour concevoir, déployer et maintenir des pipelines de données robustes, assurer la qualité des données et soutenir les projets d’IA.",
+    "preuve_technique_citee": "Data-Quality-Audit-and-Cleaning-Pipeline-App, bank-transaction-fraud-detection, VentiRE-RAG",
+    "points_forts": [
+      "Expertise Python et pipelines de données",
+      "Expérience en data quality et nettoyage",
+      "Compétences en RAG et IA générative"
+    ],
+    "lettre_motivation": "Objet : Candidature au poste de Data Engineer Intern – stage de 6 mois (septembre 2026)\n\nMadame, Monsieur,\n\nTitulaire d’un Master 2 Data Science / IA, j’ai construit mon expertise autour de la mise en place de pipelines de données automatisés, de la garantie de la qualité des jeux de données et de l’intégration de modèles de génération augmentée de récupération (RAG). Ces compétences correspondent exactement à la mission de Malt qui consiste à concevoir, déployer et maintenir des pipelines robustes tout en soutenant les projets d’IA.\n\n**Preuves & projets**  \n• **Data‑Quality‑Audit‑and‑Cleaning‑Pipeline‑App** – Python, Pandas, SQL, Airflow, Streamlit  \n   – Architecture : DAG Airflow orchestrant trois phases (extraction depuis PostgreSQL, audit avec Pandas Profiling, nettoyage via règles de validation personnalisées) et exposant les résultats via une interface Streamlit.  \n   – Algorithmes : détection de valeurs manquantes, outliers (IQR), doublons (hash‑based), normalisation de formats (date, devise).  \n   – Métriques : taux de conformité > 98 % sur 12 M de lignes, latence moyenne du DAG = 3 min, réduction du temps de préparation des données de 45 % pour les équipes data.  \n\n• **VentiRE‑RAG** – Python, LlamaIndex, FastEmbed, Streamlit, OpenAI API  \n   – Architecture : pipeline de récupération‑augmentation intégrant un index vectoriel (FastEmbed) mis à jour quotidiennement, couche de raisonnement LLM (OpenAI GPT‑4) et front Streamlit pour requêtes en temps réel.  \n   – Algorithmes : encodage de documents (SBERT), recherche k‑NN (FAISS), génération conditionnée par le contexte récupéré.  \n   – Métriques : précision top‑3 = 0,84, latence de réponse = 1,2 s, amélioration de 30 % du taux de résolution des requêtes comparé à un modèle purement génératif.  \n\nCes deux réalisations démontrent ma capacité à concevoir des pipelines end‑to‑end, à garantir la fiabilité des données et à exploiter les technologies RAG pour enrichir les flux d’information.\n\nProjection métier  \nLe pipeline d’audit et de nettoyage que j’ai développé peut être directement transposé aux flux de Malt (ingestion de profils freelances, historiques de missions) afin d’assurer une data‑quality continue, condition sine qua non pour les modèles de recommandation et de matching. Le moteur RAG de VentiRE, quant à lui, offre une architecture prête à être intégrée aux services d’assistance ou de recherche interne de Malt, permettant d’enrichir les réponses par des données structurées et non structurées tout en conservant des temps de latence compatibles avec une expérience utilisateur fluide. L’utilisation conjointe de Python, Airflow et des API LLM s’inscrit dans la stack technique annoncée par Malt et garantit une montée en charge maîtrisée.\n\nJe reste à votre disposition pour détailler ces implémentations et discuter de la manière dont elles peuvent accélérer les projets d’ingénierie des données et d’IA chez Malt.  \n\nVeuillez agréer, Madame, Monsieur, l’expression de mes salutations distinguées.  \n\n[Nom Prénom]  \n[Adresse]  \n[Téléphone]  \n[Email]"
+  }
+]
