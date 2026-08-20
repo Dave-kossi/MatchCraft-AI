@@ -1,4 +1,3 @@
-# src/agent.py
 import json
 import time
 import os
@@ -6,8 +5,8 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-MODEL_REDACTION = "llama-3.3-70b-versatile"
-MODEL_LEGER = "llama-3.1-8b-instant"
+MODEL_REDACTION = "openai/gpt-oss-120b"
+MODEL_LEGER = "openai/gpt-oss-20b"
 
 SCORE_REGENERATION_SEUIL = 7
 MAX_RETRIES_API = 2
@@ -86,7 +85,7 @@ def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, githu
             messages=[{"role": "user", "content": prompt}],
             model=MODEL_LEGER,
             temperature=0.2,
-            max_tokens=850,
+            max_tokens=800,
         )
         return json.loads(r.choices[0].message.content)
     except Exception as e:
@@ -123,7 +122,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
     CONSIGNES ET STRUCTURE DE RÉDACTION :
     1. Objet : Mentionner clairement l'intitulé du poste et la durée (ex: stage 6 mois).
     2. Accroche : Faire un lien direct entre le parcours du candidat et l'enjeu précis de l'entreprise.
-    3. Corps (Preuves & Projets) : Utiliser OBLIGATOIREMENT une liste à puces (•) pour détailler les 3 projets sélectionnés ci-dessus, avec leurs caractéristiques techniques (architectures, algorithmes, métriques, outils).
+    3. Corps (Preuves & Projets) : Utiliser OBLIGATOIREMENT une liste à puces (•) pour détailler les 2 projets sélectionnés ci-dessus, avec leurs caractéristiques techniques (architectures, algorithmes, métriques, outils).
     4. Projection Métier : Expliquer comment ces réalisations répondent concrètement aux défis décrits dans l'offre.
     5. Conclusion : Demande d'entretien directe et formule de politesse soignée.
 
@@ -150,7 +149,7 @@ def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, 
         ],
         model=MODEL_REDACTION,
         temperature=0.3,
-        max_tokens=2800,
+        max_tokens=2500,
         json_mode=False
     )
     return r.choices[0].message.content.strip()
@@ -197,14 +196,9 @@ def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github
     """Pipeline principal de l'agent adapteur d'offres."""
     try:
         print(f"🔍 Analyse et matching pour l'offre : {offre.get('title')} chez {offre.get('company')}...")
-        
-        # 1. Matching intelligent entre l'offre et le profil
+
         matching = _extraire_et_matcher(offre, cv_texte, portfolio_texte, github_texte)
-
-        # 2. Rédaction adaptée
         lettre = _rediger_lettre_adaptee(offre, cv_texte, matching)
-
-        # 3. Contrôle qualité / Critique
         critique = _critiquer_lettre(lettre, offre, matching)
 
         if critique["score"] < SCORE_REGENERATION_SEUIL:
@@ -214,7 +208,7 @@ def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github
             )
 
         nb_mots = len(lettre.split())
-        print(f" Lettre adaptée générée ({nb_mots} mots).")
+        print(f"✅ Lettre adaptée générée ({nb_mots} mots).")
 
         return {
             "score_adequation": int(matching.get("score_adequation", 0)),
