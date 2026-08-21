@@ -1,19 +1,59 @@
 import json
-import time
 import os
+import time
+from typing import Any, Dict, List, Optional
+
 from groq import Groq
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-MODEL_REDACTION = "openai/gpt-oss-120b"
 MODEL_LEGER = "openai/gpt-oss-20b"
+MODEL_REDACTION = "openai/gpt-oss-120b"
 
 SCORE_REGENERATION_SEUIL = 7
-MAX_RETRIES_API = 2
+SCORE_MINIMUM_VALIDATION = 7
+
+MAX_RETRIES_API = 3
+RETRY_BASE_DELAY = 2
+
+MAX_OFFRE_CHARS = 6000
+MAX_CV_CHARS = 5000
+MAX_PORTFOLIO_CHARS = 6000
+MAX_GITHUB_CHARS = 6000
 
 
-def _appel_groq(messages: list, model: str, temperature: float, max_tokens: int, json_mode: bool = True):
-    """Centralise l'appel à l'API Groq avec gestion des erreurs et retries."""
+# ============================================================
+# OUTILS GÉNÉRIQUES
+# ============================================================
+
+def _nettoyer_texte(texte: Optional[str]) -> str:
+    if not texte:
+        return ""
+    return str(texte).replace("\x00", " ").strip()
+
+
+def _json_valide(contenu: str) -> Dict[str, Any]:
+    if not contenu:
+        raise ValueError("Réponse LLM vide.")
+    try:
+        return json.loads(contenu)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"JSON invalide retourné par le modèle : {e}")
+
+
+def _appel_groq(
+    messages: List[Dict[str, str]],
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    json_mode: bool = True,
+):
+    """Centralise tous les appels Groq — retry automatique, backoff progressif, JSON strict si demandé."""
     kwargs = {
         "messages": messages,
         "model": model,
@@ -31,275 +71,680 @@ def _appel_groq(messages: list, model: str, temperature: float, max_tokens: int,
             derniere_erreur = e
             print(f"⚠️ Erreur Groq (tentative {tentative}/{MAX_RETRIES_API}) : {e}")
             if tentative < MAX_RETRIES_API:
-                time.sleep(2 * tentative)
+                time.sleep(RETRY_BASE_DELAY * tentative)
 
-    raise derniere_erreur
+    raise RuntimeError(f"Échec définitif de l'appel Groq après {MAX_RETRIES_API} tentatives.") from derniere_erreur
 
 
-def _extraire_et_matcher(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
+# ============================================================
+# 1. ANALYSE DE L'OFFRE
+# ============================================================
+
+def _analyser_offre(offre: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Étape 1 & 2 : Analyse dynamiquement l'offre (besoins explicites de l'entreprise)
-    et sélectionne les projets/preuves les plus pertinents dans le dossier du candidat,
-    en extrayant UNIQUEMENT ce qui est réellement présent dans les documents fournis.
+    Analyse uniquement l'offre : missions, compétences, technologies, mots-clés.
+    Aucun matching candidat n'est effectué ici.
+
+    Chaque besoin reçoit un "id" numérique stable — c'est CET id, et non une
+    reformulation du texte, qui sera réutilisé à l'étape de matching. Ça évite
+    qu'une paraphrase du LLM entre deux appels fasse échouer silencieusement
+    le calcul du score (cf. version précédente, qui comparait des sous-chaînes
+    de texte entre deux appels LLM indépendants — fragile).
     """
+    description = _nettoyer_texte(offre.get("description", ""))[:MAX_OFFRE_CHARS]
+
     prompt = f"""
-    Tu es un Expert Recruteur et Data Scientist, rigoureux et factuel.
-    Analyse l'offre d'emploi ci-dessous et effectue un matching dynamique avec le profil du candidat.
+Tu es un expert en recrutement technique et en analyse d'offres
+Data Science, IA, Machine Learning et Software Engineering.
 
-    OFFRE D'EMPLOI :
-    Titre : {offre.get('title')}
-    Entreprise : {offre.get('company')}
-    Description : {offre.get('description', '')[:3500]}
+Analyse UNIQUEMENT l'offre ci-dessous.
 
-    DOSSIER COMPLET DU CANDIDAT :
-    [CV] : {cv_texte[:2500]}
-    [PORTFOLIO] : {portfolio_texte[:3500]}
-    [GITHUB] : {github_texte[:3000]}
+OFFRE
+-----
+Titre :
+{offre.get("title", "")}
 
-    TÂCHES :
-    1. Identifie 2 à 4 BESOINS CONCRETS ET EXPLICITES de l'entreprise tels que formulés dans l'offre
-       (pas une reformulation vague — reprends les responsabilités/exigences réellement écrites).
-    2. Sélectionne les 2 PROJETS du candidat les plus pertinents par rapport à CES besoins précis.
-    3. Pour chaque projet, extrais UNIQUEMENT les technologies et métriques EXPLICITEMENT présentes
-       dans [CV]/[PORTFOLIO]/[GITHUB] ci-dessus. N'invente RIEN : si aucune métrique chiffrée n'existe
-       dans la source pour ce projet, laisse "metriques" à une chaîne vide — ne complète jamais avec
-       un chiffre plausible.
-    4. Identifie un FACTEUR DIFFÉRENCIANT RÉEL du candidat par rapport à un profil Data/IA "standard"
-       de même niveau — ex: une combinaison inhabituelle de compétences, un projet mené en autonomie
-       de bout en bout, un domaine d'application rare (énergie, batteries, réglementation...). Ce facteur
-       DOIT être déductible du dossier fourni — jamais une qualité générique du type "très motivé".
-    5. Extrais le vocabulaire métier exact de l'offre à réutiliser dans la lettre.
+Entreprise :
+{offre.get("company", "")}
 
-    Réponds UNIQUEMENT sous forme de JSON strict :
+Description :
+{description}
+
+OBJECTIF
+
+Extrais les besoins réels de l'entreprise sans inventer d'informations.
+
+Pour chaque besoin important, assigne-lui un "id" numérique séquentiel
+commençant à 0 (0, 1, 2...). Cet id sera réutilisé tel quel à l'étape
+suivante — ne le change jamais et ne le confonds pas avec un autre besoin.
+
+Pour chaque besoin :
+1. Reprends fidèlement le besoin exprimé dans l'offre.
+2. Identifie son type : mission / compétence / technologie / soft_skill / formation / autre
+3. Évalue son importance : high / medium / low
+4. Identifie les mots-clés métier réellement présents.
+
+IMPORTANT :
+- Ne transforme pas une information générique en exigence.
+- Ne suppose aucune technologie absente de l'offre.
+- Ne complète pas l'offre avec tes connaissances générales.
+- Les éléments doivent être traçables au texte fourni.
+
+Réponds UNIQUEMENT en JSON valide.
+
+FORMAT :
+
+{{
+  "poste": "...",
+  "entreprise": "...",
+  "secteur": "...",
+  "enjeu_principal": "...",
+
+  "besoins": [
     {{
-      "besoins_entreprise": ["besoin concret 1 tiré du texte de l'offre", "besoin concret 2", "..."],
-      "secteur_enjeu": "Description en une phrase de l'enjeu principal de l'offre",
-      "facteur_differenciant": "Ce qui distingue concrètement ce candidat, ancré dans un fait réel du dossier",
-      "mots_cles_metier": ["mot1", "mot2", "mot3", "mot4"],
-      "projets_selectionnes": [
-        {{
-          "nom": "Nom du projet, tel qu'il apparaît dans la source",
-          "technos_cles": "Technos/méthodes UNIQUEMENT si mentionnées dans la source",
-          "metriques": "Chiffre EXACT trouvé dans la source, ou chaîne vide si aucun n'existe",
-          "besoin_couvert": "Quel besoin_entreprise ce projet adresse précisément",
-          "pourquoi_pertinent": "Pourquoi ce projet prouve que le candidat peut répondre à ce besoin"
-        }}
-      ],
-      "score_adequation": 85,
-      "points_forts": ["Point fort 1", "Point fort 2"]
+      "id": 0,
+      "texte": "...",
+      "type": "mission",
+      "importance": "high"
     }}
-    """
-    try:
-        r = _appel_groq(
-            messages=[{"role": "user", "content": prompt}],
-            model=MODEL_LEGER,
-            temperature=0.2,
-            max_tokens=900,
-        )
-        return json.loads(r.choices[0].message.content)
-    except Exception as e:
-        print(f"⚠️ Erreur extraction & matching : {e}")
-        return {
-            "besoins_entreprise": [],
-            "secteur_enjeu": "Analyse d'offre non disponible",
-            "mots_cles_metier": [],
-            "projets_selectionnes": [],
-            "score_adequation": 50,
-            "points_forts": []
-        }
+  ],
 
+  "technologies": ["Python", "SQL"],
+  "mots_cles_metier": ["mot-clé 1", "mot-clé 2"],
+  "niveau_recherche": "...",
+  "type_contrat": "stage / alternance / emploi / inconnu"
+}}
+"""
 
-def _rediger_lettre_adaptee(offre: dict, cv_texte: str, analyse_matching: dict, retour_critique: str = None) -> str:
-    """
-    Étape 3 : Rédige la lettre de motivation sur mesure en mappant explicitement
-    chaque besoin de l'entreprise à une preuve du candidat, sans jamais inventer
-    de métrique ou de techno absente de la source.
-    """
-    projets_str = ""
-    for p in analyse_matching.get("projets_selectionnes", []):
-        metrique = p.get("metriques", "").strip()
-        metrique_str = f" — Résultat : {metrique}" if metrique else " — (pas de métrique chiffrée disponible, décrire qualitativement)"
-        projets_str += (
-            f"• {p.get('nom')} : {p.get('technos_cles')}{metrique_str}\n"
-            f"  Répond au besoin : {p.get('besoin_couvert', 'N/A')}\n"
-        )
-
-    besoins_str = "\n".join(f"- {b}" for b in analyse_matching.get("besoins_entreprise", [])) or "- (aucun besoin explicite extrait)"
-
-    system_prompt = f"""
-    Tu es un candidat de niveau Master 2 Data Science / IA rédigant une LETTRE DE MOTIVATION SUR MESURE, PERCUTANTE ET FACTUELLE.
-
-    POSTURE À ADOPTER : Imagine un recruteur qui a reçu des centaines de candidatures pour cette offre.
-    Il ne cherche pas une lettre polie de plus — il cherche une raison concrète de RETENIR celle-ci plutôt
-    que les autres. Chaque phrase doit répondre implicitement à la question "pourquoi lui/elle et pas un
-    autre profil Data/IA de même niveau ?" — via des faits précis, jamais via des superlatifs ou des
-    déclarations d'intention.
-
-    ENTREPRISE CIBLE : {offre.get('company')}
-    INTITULÉ DU POSTE : {offre.get('title')}
-    ENJEU PRINCIPAL IDENTIFIÉ : {analyse_matching.get('secteur_enjeu')}
-    FACTEUR DIFFÉRENCIANT RÉEL DU CANDIDAT (à faire ressortir sans l'affirmer platement) : {analyse_matching.get('facteur_differenciant', '')}
-
-    BESOINS CONCRETS DE L'ENTREPRISE (extraits littéralement de l'offre — à adresser un par un) :
-    {besoins_str}
-
-    MOTS CLÉS DU SECTEUR À INTÉGRER : {', '.join(analyse_matching.get('mots_cles_metier', []))}
-
-    PROJETS À MOBILISER COMME PREUVES (avec le besoin que chacun couvre) :
-    {projets_str}
-
-    CONSIGNES ET STRUCTURE DE RÉDACTION :
-    1. Objet : Mentionner clairement l'intitulé du poste et la durée (ex: stage 6 mois).
-    2. Accroche : Lien direct entre le parcours du candidat et l'enjeu précis de l'entreprise —
-       VARIE la formulation d'une lettre à l'autre, évite les tournures d'ouverture répétitives
-       type "correspond exactement à la mission de X".
-    3. Corps (Besoins & Preuves) : Pour CHAQUE besoin listé ci-dessus, associe explicitement le
-       projet qui y répond, en liste à puces (•), avec ses caractéristiques techniques RÉELLES.
-       Fais ressortir le facteur différenciant à travers les FAITS eux-mêmes (le projet, le contexte,
-       la façon dont il a été mené), jamais en le déclarant directement ("je suis unique parce que...").
-    4. Projection Métier : Comment ces réalisations répondent concrètement aux défis décrits dans l'offre —
-       c'est ici que la lettre doit donner envie d'un entretien plutôt que de passer au CV suivant.
-    5. Conclusion : Demande d'entretien directe et formule de politesse soignée.
-
-    REGLES ANTI-HALLUCINATION (STRICTES — prioritaires sur tout le reste, y compris sur la différenciation) :
-    - N'invente JAMAIS de métrique chiffrée (%, durée, volume, score) absente de la section
-      "PROJETS À MOBILISER" ci-dessus. Si un projet n'a pas de métrique fournie, décris le résultat
-      qualitativement (ex: "a permis de fiabiliser le traitement des données") SANS donner de chiffre.
-    - Ne cite QUE les technologies listées dans "technos_cles" ci-dessus pour chaque projet —
-      jamais une techno "probable" ou "logique" mais non confirmée.
-    - Si un besoin de l'entreprise n'a aucun projet correspondant, ne force pas un lien artificiel :
-      mentionne une compétence transférable réelle plutôt que d'inventer une expérience.
-    - Le facteur différenciant doit rester ANCRÉ dans les projets/faits réels listés ci-dessus —
-      ne jamais l'enjoliver avec un détail non présent dans la source.
-
-    REGLES DE STYLE (ANTI-RÉPÉTITION, ANTI-PHRASES CREUSES, ANTI-GÉNÉRIQUE) :
-    - INTERDIT d'utiliser des formules génériques : "je suis convaincu que", "un atout pour votre équipe", "excellent candidat", "passionné depuis toujours", "dynamique et motivé", "le candidat idéal".
-    - INTERDIT d'affirmer la différenciation directement ("ce qui me distingue est...") — elle doit se voir
-      à travers les faits présentés, pas être proclamée.
-    - Chaque paragraphe doit apporter une preuve ou un élément factuel, jamais une affirmation gratuite.
-    - Ton : Professionnel, orienté ingénierie et résultats.
-    """
-
-    if retour_critique:
-        system_prompt += f"\n\n REVISION REQUISE : La version précédente comporte des faiblesses. Corrige impérativement : {retour_critique}"
-
-    user_prompt = f"""
-    DESCRIPTION COMPLETE DE L'OFFRE :
-    {offre.get('description', '')[:3000]}
-
-    Rédige la lettre complète en texte pur.
-    """
-
-    r = _appel_groq(
+    response = _appel_groq(
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "system", "content": "Tu es un analyste d'offres rigoureux. Tu n'inventes aucune information."},
+            {"role": "user", "content": prompt},
+        ],
+        model=MODEL_LEGER,
+        temperature=0.1,
+        max_tokens=1200,
+        json_mode=True,
+    )
+
+    resultat = _json_valide(response.choices[0].message.content)
+
+    # Garde-fou : si le modèle a oublié un id ou l'a mal typé, on le régénère
+    # nous-mêmes par position plutôt que de laisser le matching échouer plus tard.
+    for i, besoin in enumerate(resultat.get("besoins", [])):
+        if not isinstance(besoin.get("id"), int):
+            besoin["id"] = i
+
+    return resultat
+
+
+# ============================================================
+# 2. MATCHING CANDIDAT / OFFRE
+# ============================================================
+
+def _matcher_candidat(
+    analyse_offre: Dict[str, Any],
+    cv_texte: str,
+    portfolio_texte: str,
+    github_texte: str,
+) -> Dict[str, Any]:
+    """
+    Analyse la correspondance entre les besoins de l'entreprise (identifiés
+    par leur id, pas leur texte) et les preuves réelles disponibles dans le
+    dossier candidat. Cette étape ne rédige PAS la lettre.
+    """
+    cv = _nettoyer_texte(cv_texte)[:MAX_CV_CHARS]
+    portfolio = _nettoyer_texte(portfolio_texte)[:MAX_PORTFOLIO_CHARS]
+    github = _nettoyer_texte(github_texte)[:MAX_GITHUB_CHARS]
+
+    besoins = json.dumps(analyse_offre.get("besoins", []), ensure_ascii=False, indent=2)
+
+    prompt = f"""
+Tu es un expert senior en recrutement Data Science / IA.
+
+Ta mission est de déterminer objectivement la correspondance entre une
+offre et le dossier réel d'un candidat.
+
+OFFRE ANALYSÉE
+==============
+
+Entreprise : {analyse_offre.get("entreprise", "")}
+Poste : {analyse_offre.get("poste", "")}
+
+Besoins (chacun a un "id" — RÉUTILISE cet id exact dans ta réponse,
+ne reformule jamais le texte du besoin) :
+{besoins}
+
+Technologies :
+{json.dumps(analyse_offre.get("technologies", []), ensure_ascii=False)}
+
+DOSSIER CANDIDAT
+================
+
+[CV]
+{cv}
+
+[PORTFOLIO]
+{portfolio}
+
+[GITHUB]
+{github}
+
+RÈGLES ABSOLUES
+
+1. Tu ne peux utiliser qu'une information réellement présente dans les documents candidat.
+2. Une technologie n'est considérée comme maîtrisée que si elle apparaît explicitement dans les sources.
+3. Une métrique ne peut être utilisée que si elle apparaît explicitement dans les sources.
+4. Ne transforme jamais une compétence supposée en expérience.
+5. Si aucune preuve ne correspond à un besoin, indique "aucune_preuve".
+6. Distingue : preuve forte / preuve partielle / compétence transférable / absence de preuve.
+7. Le matching doit être basé sur les besoins précis de l'offre, pas uniquement sur le domaine général.
+8. Identifie les deux projets les plus pertinents maximum.
+9. Le facteur différenciant doit être basé sur un fait vérifiable.
+10. Ne rédige aucune lettre à cette étape.
+11. Pour chaque correspondance, indique "besoin_id" (l'entier exact fourni ci-dessus) — JAMAIS "besoin" en texte libre.
+
+FORMAT JSON STRICT :
+
+{{
+  "correspondances": [
+    {{
+      "besoin_id": 0,
+      "niveau_correspondance": "forte",
+      "preuve": "...",
+      "source": "CV / Portfolio / GitHub",
+      "projet": "..."
+    }}
+  ],
+
+  "projets_selectionnes": [
+    {{
+      "nom": "...",
+      "description_factuelle": "...",
+      "technologies": [],
+      "metriques": [],
+      "sources": [],
+      "besoins_couverts": [],
+      "niveau_preuve": "forte"
+    }}
+  ],
+
+  "facteur_differenciant": "...",
+  "points_forts": [],
+  "gaps": [],
+  "competences_transferables": []
+}}
+"""
+
+    response = _appel_groq(
+        messages=[
+            {
+                "role": "system",
+                "content": "Tu es un évaluateur de candidature extrêmement factuel. Toute affirmation doit être soutenue par une preuve présente dans les documents.",
+            },
+            {"role": "user", "content": prompt},
         ],
         model=MODEL_REDACTION,
-        temperature=0.4,
-        max_tokens=2500,
-        json_mode=False
+        temperature=0.1,
+        max_tokens=1800,
+        json_mode=True,
     )
-    return r.choices[0].message.content.strip()
+
+    return _json_valide(response.choices[0].message.content)
 
 
-def _critiquer_lettre(lettre: str, offre: dict, analyse_matching: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
-    """Étape 4 : Vérifie le style, la fidélité factuelle à la source, ET le pouvoir différenciant réel de la lettre."""
+# ============================================================
+# 3. CALCUL DU SCORE D'ADEQUATION (côté Python — jamais inventé par le LLM)
+# ============================================================
+
+def _calculer_score_adequation(analyse_offre: Dict[str, Any], matching: Dict[str, Any]) -> int:
+    """
+    Calcule le score en Python à partir des jugements qualitatifs du LLM.
+    Le matching besoin ↔ correspondance se fait par ID, pas par comparaison
+    de texte — fiable même si les deux appels LLM ne formulent pas le besoin
+    à l'identique.
+    """
+    poids = {"high": 5, "medium": 3, "low": 1}
+    correspondances = {"forte": 5, "partielle": 3, "transferable": 2, "faible": 1, "aucune_preuve": 0}
+
+    besoins = analyse_offre.get("besoins", [])
+    resultats = matching.get("correspondances", [])
+
+    if not besoins:
+        return 0
+
+    resultats_par_id: Dict[int, List[Dict[str, Any]]] = {}
+    for resultat in resultats:
+        bid = resultat.get("besoin_id")
+        if isinstance(bid, int):
+            resultats_par_id.setdefault(bid, []).append(resultat)
+
+    score_total = 0
+    score_max = 0
+
+    for besoin in besoins:
+        importance = besoin.get("importance", "medium")
+        poids_besoin = poids.get(importance, 3)
+        besoin_id = besoin.get("id")
+
+        score_max += poids_besoin * 5
+
+        meilleure_correspondance = 0
+        for resultat in resultats_par_id.get(besoin_id, []):
+            niveau = resultat.get("niveau_correspondance", "aucune_preuve")
+            meilleure_correspondance = max(meilleure_correspondance, correspondances.get(niveau, 0))
+
+        score_total += poids_besoin * meilleure_correspondance
+
+    if score_max == 0:
+        return 0
+
+    return round((score_total / score_max) * 100)
+
+
+# ============================================================
+# 4. CONSTRUCTION DE L'EVIDENCE PACK
+# ============================================================
+
+def _construire_evidence_pack(analyse_offre: Dict[str, Any], matching: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Contexte minimal et déjà vérifié que le rédacteur est autorisé à utiliser.
+    Le rédacteur ne reçoit jamais le CV/portfolio/GitHub bruts — seulement
+    ce qui a déjà été validé à l'étape de matching. C'est le vrai garde-fou
+    anti-hallucination : structurel, pas juste une instruction de prompt.
+    """
+    return {
+        "entreprise": analyse_offre.get("entreprise", ""),
+        "poste": analyse_offre.get("poste", ""),
+        "enjeu_principal": analyse_offre.get("enjeu_principal", ""),
+        "besoins": analyse_offre.get("besoins", []),
+        "mots_cles_metier": analyse_offre.get("mots_cles_metier", []),
+        "correspondances": matching.get("correspondances", []),
+        "projets_selectionnes": matching.get("projets_selectionnes", []),
+        "facteur_differenciant": matching.get("facteur_differenciant", ""),
+        "points_forts": matching.get("points_forts", []),
+        "gaps": matching.get("gaps", []),
+        "competences_transferables": matching.get("competences_transferables", []),
+    }
+
+
+# ============================================================
+# 5. RÉDACTION DE LA LETTRE
+# ============================================================
+
+def _rediger_lettre(offre: Dict[str, Any], evidence_pack: Dict[str, Any], retour_critique: Optional[str] = None) -> str:
+    """Génère la lettre à partir de l'Evidence Pack. Le modèle n'a pas le droit d'inventer une nouvelle preuve."""
+    evidence = json.dumps(evidence_pack, ensure_ascii=False, indent=2)
+    description_offre = _nettoyer_texte(offre.get("description", ""))[:MAX_OFFRE_CHARS]
+
+    revision = ""
+    if retour_critique:
+        revision = f"""
+RÉVISION OBLIGATOIRE
+
+La précédente lettre a été critiquée pour :
+{retour_critique}
+
+Corrige précisément ces problèmes. Ne crée aucune nouvelle information.
+"""
+
+    system_prompt = f"""
+Tu es un rédacteur expert en candidatures Data Science, Machine Learning
+et Intelligence Artificielle.
+
+Tu rédiges une lettre de motivation professionnelle, naturelle, spécifique
+à l'entreprise et fondée uniquement sur des preuves vérifiées.
+
+POSTURE : Un recruteur reçoit des centaines de candidatures pour cette offre.
+Chaque phrase doit répondre implicitement à "pourquoi ce candidat plutôt
+qu'un autre profil Data/IA de même niveau" — via des faits précis de
+l'Evidence Pack, jamais via des superlatifs.
+
+ENTREPRISE : {offre.get("company", "")}
+POSTE : {offre.get("title", "")}
+
+EVIDENCE PACK AUTORISÉ :
+{evidence}
+
+RÈGLES ABSOLUES
+
+1. N'invente aucune expérience.
+2. N'invente aucune technologie.
+3. N'invente aucune métrique.
+4. N'invente aucune responsabilité exercée par le candidat.
+5. Utilise uniquement les projets présents dans "projets_selectionnes".
+6. Si une compétence demandée n'a pas de preuve directe, utilise uniquement
+   une compétence transférable réellement présente dans "competences_transferables".
+7. Ne prétends jamais que le candidat maîtrise une technologie simplement
+   parce qu'elle est demandée dans l'offre.
+8. Ne dis jamais "je suis le candidat idéal".
+9. Évite : "je suis convaincu que", "passionné depuis toujours", "dynamique
+   et motivé", "atout pour votre équipe", "excellent candidat", "correspond parfaitement".
+10. La différenciation ("facteur_differenciant") doit apparaître à travers
+    les faits eux-mêmes, jamais être proclamée directement.
+11. Le vocabulaire métier de l'entreprise doit être utilisé naturellement.
+12. La lettre doit rester humaine, pas un rapport technique.
+13. Varie la formulation de l'accroche d'une lettre à l'autre — évite les
+    tournures d'ouverture répétitives type "correspond exactement à la mission de X".
+
+STRUCTURE
+- Objet
+- Accroche contextualisée
+- Pourquoi cette entreprise / ce poste
+- Deux preuves concrètes maximum
+- Correspondance avec les missions
+- Projection
+- Demande d'entretien
+- Formule de politesse
+
+FORMAT
+Texte brut uniquement. Pas de JSON. Pas de Markdown. Pas de titre "Lettre de motivation".
+
+LONGUEUR
+Environ 350 à 500 mots.
+
+{revision}
+"""
+
+    user_prompt = f"""
+DESCRIPTION DE L'OFFRE :
+{description_offre}
+
+Rédige maintenant la lettre.
+"""
+
+    response = _appel_groq(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        model=MODEL_REDACTION,
+        temperature=0.35,
+        max_tokens=1800,
+        json_mode=False,
+    )
+
+    lettre = response.choices[0].message.content
     if not lettre:
-        return {"score": 0, "justification": "Lettre vide."}
+        raise ValueError("Le modèle n'a retourné aucune lettre.")
+
+    return lettre.strip()
+
+
+# ============================================================
+# 6. CONTRÔLE FACTUEL
+# ============================================================
+
+def _verifier_faits(lettre: str, evidence_pack: Dict[str, Any]) -> Dict[str, Any]:
+    """Vérifie que la lettre ne contient aucun fait absent de l'Evidence Pack."""
+    evidence = json.dumps(evidence_pack, ensure_ascii=False, indent=2)
 
     prompt = f"""
-    Tu es un réviseur de candidatures ultra-strict, ancien recruteur technique.
-    Évalue cette lettre de motivation destinée à l'offre '{offre.get('title')}' chez '{offre.get('company')}'.
+Tu es un fact-checker extrêmement strict.
 
-    DOSSIER SOURCE DU CANDIDAT (pour vérification factuelle) :
-    [CV] : {cv_texte[:2500]}
-    [PORTFOLIO] : {portfolio_texte[:3000]}
-    [GITHUB] : {github_texte[:2500]}
+Compare la lettre avec l'Evidence Pack.
 
-    CRITÈRES D'ÉVALUATION (chacun peut faire chuter la note à lui seul) :
-    1. FIDÉLITÉ FACTUELLE (le plus important) : Repère chaque métrique chiffrée, techno ou réalisation
-       citée dans la lettre. Est-elle VRAIMENT présente dans le dossier source ci-dessus, ou semble-t-elle
-       inventée/extrapolée ? Toute métrique ou affirmation non vérifiable dans le dossier = note ≤ 4/10,
-       quelle que soit la qualité du reste.
-    2. POUVOIR DIFFÉRENCIANT : Un recruteur qui lit des centaines de lettres similaires retiendrait-il
-       CELLE-CI ? Ou ressemble-t-elle à n'importe quelle lettre de candidat Data/IA de même niveau,
-       malgré des faits corrects ? La différenciation doit transparaître à travers des faits précis,
-       pas des formules ("motivé", "passionné", "excellent").
-    3. Anti-phrases creuses : Contient-elle des expressions bannies comme "je suis convaincu", "atout pour votre équipe", "excellent candidat", "le candidat idéal" ?
-    4. Adaptation : Les projets cités et le vocabulaire correspondent-ils bien aux besoins précis de CETTE offre (pas juste au domaine en général) ?
-    5. Présence des puces techniques : La lettre utilise-t-elle des puces claires pour exposer les réalisations ?
+EVIDENCE PACK
+=============
+{evidence}
 
-    LETTRE À ÉVALUER :
-    {lettre[:3000]}
+LETTRE
+======
+{lettre}
 
-    Réponds UNIQUEMENT en JSON strict :
-    {{
-      "score": <note sur 10>,
-      "fidelite_factuelle_ok": true ou false,
-      "differenciation_suffisante": true ou false,
-      "justification": "Explication courte, notamment si un fait semble halluciné ou si la lettre reste générique"
-    }}
+Vérifie : technologies citées, projets cités, métriques citées, expériences
+citées, réalisations, responsabilités, toute affirmation factuelle.
+
+Une information non explicitement soutenue par l'Evidence Pack doit être
+considérée comme non vérifiée.
+
+Réponds UNIQUEMENT en JSON :
+{{
+  "fidelite_factuelle_ok": true,
+  "faits_non_verifies": [],
+  "score_fidelite": 10,
+  "justification": "..."
+}}
+"""
+
+    response = _appel_groq(
+        messages=[
+            {
+                "role": "system",
+                "content": "Tu ne dois jamais supposer qu'une affirmation est vraie. Si elle n'est pas démontrée dans l'Evidence Pack, elle est non vérifiée.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        model=MODEL_LEGER,
+        temperature=0,
+        max_tokens=700,
+        json_mode=True,
+    )
+
+    resultat = _json_valide(response.choices[0].message.content)
+
+    fidelite = resultat.get("fidelite_factuelle_ok")
+    if not isinstance(fidelite, bool):
+        raise ValueError("fidelite_factuelle_ok doit être un booléen JSON.")
+
+    try:
+        score = int(resultat.get("score_fidelite", 0))
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(10, score))
+
+    return {
+        "fidelite_factuelle_ok": fidelite,
+        "faits_non_verifies": resultat.get("faits_non_verifies", []),
+        "score_fidelite": score,
+        "justification": str(resultat.get("justification", "")),
+    }
+
+
+# ============================================================
+# 7. CRITIQUE QUALITATIVE
+# ============================================================
+
+def _critiquer_lettre(lettre: str, offre: Dict[str, Any], evidence_pack: Dict[str, Any]) -> Dict[str, Any]:
+    """Critique la qualité : personnalisation, adéquation, clarté, différenciation, style."""
+    evidence = json.dumps(evidence_pack, ensure_ascii=False, indent=2)
+
+    prompt = f"""
+Tu es un recruteur senior spécialisé en Data Science et IA.
+
+OFFRE :
+Entreprise : {offre.get("company")}
+Poste : {offre.get("title")}
+
+EVIDENCE PACK :
+{evidence}
+
+LETTRE :
+{lettre}
+
+Évalue la lettre sur 10.
+
+CRITÈRES :
+1. Adéquation avec l'offre
+2. Personnalisation
+3. Pertinence des projets
+4. Pouvoir différenciant
+5. Clarté
+6. Ton professionnel
+7. Absence de phrases creuses
+8. Absence de répétitions
+9. Capacité à donner envie d'un entretien
+
+Ne pénalise pas une lettre parce qu'elle ne prétend pas maîtriser une
+technologie qui n'est pas prouvée.
+
+Réponds UNIQUEMENT en JSON :
+{{
+  "score": 0,
+  "adequation_ok": true,
+  "differenciation_suffisante": true,
+  "style_ok": true,
+  "justification": "...",
+  "points_a_corriger": []
+}}
+"""
+
+    response = _appel_groq(
+        messages=[
+            {"role": "system", "content": "Tu es un critique de lettres de motivation exigeant mais objectif."},
+            {"role": "user", "content": prompt},
+        ],
+        model=MODEL_LEGER,
+        temperature=0,
+        max_tokens=700,
+        json_mode=True,
+    )
+
+    resultat = _json_valide(response.choices[0].message.content)
+
+    try:
+        score = int(resultat.get("score", 0))
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(10, score))
+
+    return {
+        "score": score,
+        "adequation_ok": resultat.get("adequation_ok", False),
+        "differenciation_suffisante": resultat.get("differenciation_suffisante", False),
+        "style_ok": resultat.get("style_ok", False),
+        "justification": str(resultat.get("justification", "")),
+        "points_a_corriger": resultat.get("points_a_corriger", []),
+    }
+
+
+# ============================================================
+# 8. PIPELINE PRINCIPAL
+# ============================================================
+
+def analyser_et_rediger(
+    offre: Dict[str, Any],
+    cv_texte: str,
+    portfolio_texte: str,
+    github_texte: str,
+) -> Optional[Dict[str, Any]]:
+    """
+    Pipeline MatchCraft AI :
+    OFFRE → ANALYSE → MATCHING (par besoin_id) → SCORE PYTHON → EVIDENCE PACK
+          → REDACTION → FACT CHECK → CRITIQUE → REGENERATION éventuelle → RESULTAT
     """
     try:
-        r = _appel_groq(
-            messages=[{"role": "user", "content": prompt}],
-            model=MODEL_LEGER,
-            temperature=0,
-            max_tokens=300,
-        )
-        res = json.loads(r.choices[0].message.content)
-        return {
-            "score": int(res.get("score", 10)),
-            "fidelite_factuelle_ok": bool(res.get("fidelite_factuelle_ok", True)),
-            "differenciation_suffisante": bool(res.get("differenciation_suffisante", True)),
-            "justification": str(res.get("justification", "")),
-        }
-    except Exception as e:
-        print(f"⚠️ Erreur critique lettre : {e}")
-        return {"score": 10, "fidelite_factuelle_ok": True, "differenciation_suffisante": True, "justification": "Contrôle indisponible"}
+        print(f"🔍 MatchCraft AI — {offre.get('title')} chez {offre.get('company')}")
 
+        print("  1️⃣ Analyse de l'offre...")
+        analyse_offre = _analyser_offre(offre)
 
-def analyser_et_rediger(offre: dict, cv_texte: str, portfolio_texte: str, github_texte: str) -> dict:
-    """Pipeline principal de l'agent adapteur d'offres."""
-    try:
-        print(f"🔍 Analyse et matching pour l'offre : {offre.get('title')} chez {offre.get('company')}...")
+        print("  2️⃣ Matching candidat/offre...")
+        matching = _matcher_candidat(analyse_offre, cv_texte, portfolio_texte, github_texte)
 
-        matching = _extraire_et_matcher(offre, cv_texte, portfolio_texte, github_texte)
-        lettre = _rediger_lettre_adaptee(offre, cv_texte, matching)
-        critique = _critiquer_lettre(lettre, offre, matching, cv_texte, portfolio_texte, github_texte)
+        score_adequation = _calculer_score_adequation(analyse_offre, matching)
+        print(f"  📊 Score d'adéquation : {score_adequation}/100")
+
+        evidence_pack = _construire_evidence_pack(analyse_offre, matching)
+
+        print("  3️⃣ Rédaction de la lettre...")
+        lettre = _rediger_lettre(offre, evidence_pack)
+
+        print("  4️⃣ Vérification factuelle...")
+        verification = _verifier_faits(lettre, evidence_pack)
+
+        print("  5️⃣ Critique qualitative...")
+        critique = _critiquer_lettre(lettre, offre, evidence_pack)
 
         besoin_regeneration = (
-            critique["score"] < SCORE_REGENERATION_SEUIL
-            or not critique.get("fidelite_factuelle_ok", True)
+            verification["score_fidelite"] < SCORE_MINIMUM_VALIDATION
+            or not verification["fidelite_factuelle_ok"]
+            or critique["score"] < SCORE_REGENERATION_SEUIL
         )
 
         if besoin_regeneration:
-            motif = critique["justification"]
-            if not critique.get("fidelite_factuelle_ok", True):
-                motif = f"HALLUCINATION DÉTECTÉE — retire tout fait non vérifiable dans la source. {motif}"
-            print(f"  ⚠️ Lettre ajustée ({critique['score']}/10 : {motif}) — régénération...")
-            lettre = _rediger_lettre_adaptee(
-                offre, cv_texte, matching, retour_critique=motif
-            )
-            # Deuxième passe de contrôle après régénération, pour ne jamais laisser
-            # partir une hallucination non détectée en cas d'échec de la 1re correction
-            critique = _critiquer_lettre(lettre, offre, matching, cv_texte, portfolio_texte, github_texte)
-            if not critique.get("fidelite_factuelle_ok", True):
-                print(f"  🚫 Hallucination persistante après régénération — offre écartée par prudence.")
+            print("  ⚠️ Lettre nécessitant une correction.")
+
+            motifs = []
+            if not verification["fidelite_factuelle_ok"]:
+                motifs.append("FAITS NON VÉRIFIÉS : " + json.dumps(verification.get("faits_non_verifies", []), ensure_ascii=False))
+            if verification.get("justification"):
+                motifs.append(verification["justification"])
+            if critique.get("justification"):
+                motifs.append(critique["justification"])
+            if critique.get("points_a_corriger"):
+                motifs.extend(critique["points_a_corriger"])
+
+            motif_revision = "\n- ".join(motifs)
+
+            print("  🔄 Régénération...")
+            lettre = _rediger_lettre(offre, evidence_pack, retour_critique=motif_revision)
+
+            # Second contrôle factuel obligatoire — le contenu a changé, on ne
+            # peut pas réutiliser l'ancien verdict.
+            verification = _verifier_faits(lettre, evidence_pack)
+
+            if not verification["fidelite_factuelle_ok"]:
+                print("  🚫 Hallucination persistante après régénération.")
                 return None
 
+            # La critique qualitative est re-jouée aussi, car le contenu a pu
+            # changer significativement (une lettre corrigée pour un problème
+            # factuel n'a pas nécessairement le même score de différenciation
+            # ou de style que l'originale) — réutiliser l'ancien score serait
+            # source d'incohérence entre le score affiché et la lettre livrée.
+            critique = _critiquer_lettre(lettre, offre, evidence_pack)
+
+        if not verification["fidelite_factuelle_ok"]:
+            print("  🚫 Lettre rejetée : contrôle factuel négatif.")
+            return None
+
+        if verification["score_fidelite"] < SCORE_MINIMUM_VALIDATION:
+            print("  🚫 Lettre rejetée : fidélité insuffisante.")
+            return None
+
         nb_mots = len(lettre.split())
-        print(f" Lettre adaptée générée ({nb_mots} mots).")
+        print(f"  ✅ Lettre validée ({nb_mots} mots)")
+
+        projets = matching.get("projets_selectionnes", [])
 
         return {
-            "score_adequation": int(matching.get("score_adequation", 0)),
-            "besoin_cle_entreprise": str(matching.get("secteur_enjeu", "")),
-            "preuve_technique_citee": ", ".join([p.get("nom", "") for p in matching.get("projets_selectionnes", [])]),
+            # Identification
+            "entreprise": offre.get("company", ""),
+            "poste": offre.get("title", ""),
+
+            # Matching
+            "score_adequation": score_adequation,
+            "enjeu_principal": analyse_offre.get("enjeu_principal", ""),
+            "besoins_entreprise": analyse_offre.get("besoins", []),
+
+            # Preuves
+            "projets_selectionnes": projets,
             "points_forts": matching.get("points_forts", []),
-            "lettre_motivation": lettre
+            "gaps": matching.get("gaps", []),
+            "facteur_differenciant": matching.get("facteur_differenciant", ""),
+
+            # Contrôle qualité
+            "score_fidelite": verification.get("score_fidelite", 0),
+            "score_lettre": critique.get("score", 0),
+            "validation_factuelle": verification.get("fidelite_factuelle_ok", False),
+
+            # Lettre finale
+            "lettre_motivation": lettre,
+            "nb_mots": nb_mots,
+
+            # Métadonnées
+            "modele_analyse": MODEL_LEGER,
+            "modele_matching": MODEL_REDACTION,
+            "modele_redaction": MODEL_REDACTION,
+
+            # --- Alias de compatibilité avec l'ancien schéma (utilisés par app.py) ---
+            # Évite que le dashboard affiche silencieusement "N/A" sur ces deux champs
+            # tant qu'app.py n'a pas été mis à jour pour lire le nouveau schéma enrichi.
+            "besoin_cle_entreprise": analyse_offre.get("enjeu_principal", ""),
+            "preuve_technique_citee": ", ".join(p.get("nom", "") for p in projets),
         }
 
     except Exception as e:
-        print(f"⚠️ Erreur globale agent : {e}")
+        print(f"🚨 Erreur globale MatchCraft AI : {e}")
         return None
