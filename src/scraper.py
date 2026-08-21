@@ -6,33 +6,44 @@ from jobspy import scrape_jobs
 # ==========================================
 # 1. PARAMÈTRES DE RECHERCHE CIBLÉS
 # ==========================================
+# Resserrés sur le positionnement réel du profil : mathématicien de formation,
+# data scientist par vocation, à l'interface modélisation mathématique / IA
+# générative, ciblant Finance, Industrie, Énergie (détection de fraude, scoring
+# de risque, RAG/LLM, transition énergétique). Des termes génériques comme
+# "Data Analyst" ou "AI Intern" ramènent trop d'offres hors-scope (BI, marketing,
+# UX...) — ça se filtre mieux en amont, à la source de la recherche, qu'après
+# coup sur des centaines de résultats bruyants.
 SEARCH_TERMS = [
-    # Français — Stage
+    # Cœur Data Science / ML — français
     "Stage Data Scientist",
     "Stage Data Science",
-    "Stage Data Analyst",
-    "Stage Intelligence Artificielle",
-    "Stage IA Generative",
     "Stage Machine Learning",
-    "Stage Data Engineer",
-    "Stage LLM",
-    # Français — Alternance
     "Alternance Data Scientist",
-    "Alternance Data Science",
-    "Alternance Data Analyst",
-    "Alternance Machine Learning",
-    "Alternance Intelligence Artificielle",
-    "Alternance Data Engineer",
+
+    # Finance / Risque / Fraude
+    "Stage Data Scientist Risque",
+    "Stage Credit Scoring",
+    "Stage Detection Fraude",
+    "Stage Data Scientist Finance",
+
+    # Industrie / Énergie
+    "Stage Data Scientist Energie",
+    "Stage Machine Learning Energie",
+    "Stage Data Scientist Industrie",
+
+    # IA générative / RAG / LLM
+    "Stage LLM",
+    "Stage RAG",
+    "Stage IA Generative",
+    "Stage NLP",
+
     # Anglais
     "Data Scientist Intern",
-    "Data Science Internship",
     "Machine Learning Intern",
-    "AI Intern",
+    "Risk Modeling Intern",
+    "Fraud Detection Intern",
     "LLM Intern",
-    "Generative AI Intern",
-    "Data Engineer Intern",
-    "Computer Vision Intern",
-    "NLP Intern",
+    "Energy Data Scientist Intern",
 ]
 
 CITIES = [
@@ -81,7 +92,7 @@ def _normaliser_dataframe(df: pd.DataFrame, site_defaut: str = "JobSpy") -> pd.D
 # ==========================================
 def collecter_offres(recherche=None, localisation=None, limites=5) -> pd.DataFrame:
     """
-    Parcourt les combinaisons de mots-clés et de villes sur JobSpy 
+    Parcourt les combinaisons de mots-clés et de villes sur JobSpy
     (LinkedIn, Indeed, Google, ZipRecruiter).
     Retourne un DataFrame au schéma normalisé.
     """
