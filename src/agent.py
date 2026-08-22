@@ -94,7 +94,7 @@ def _appel_groq(
             return client.chat.completions.create(**kwargs)
         except Exception as e:
             derniere_erreur = e
-            print(f"⚠️ Erreur Groq (tentative {tentative}/{MAX_RETRIES_API}) : {e}")
+            print(f" Erreur Groq (tentative {tentative}/{MAX_RETRIES_API}) : {e}")
             if tentative < MAX_RETRIES_API:
                 time.sleep(RETRY_BASE_DELAY * tentative)
 
@@ -673,7 +673,7 @@ def analyser_et_rediger(
         matching = _matcher_candidat(analyse_offre, cv_texte, portfolio_texte, github_texte)
 
         score_adequation = _calculer_score_adequation(analyse_offre, matching)
-        print(f"  📊 Score d'adéquation : {score_adequation}/100")
+        print(f"  Score d'adéquation : {score_adequation}/100")
 
         evidence_pack = _construire_evidence_pack(analyse_offre, matching)
 
@@ -693,7 +693,7 @@ def analyser_et_rediger(
         )
 
         if besoin_regeneration:
-            print("  ⚠️ Lettre nécessitant une correction.")
+            print("⚠️ Lettre nécessitant une correction.")
 
             motifs = []
             if not verification["fidelite_factuelle_ok"]:
@@ -707,7 +707,7 @@ def analyser_et_rediger(
 
             motif_revision = "\n- ".join(motifs)
 
-            print("  🔄 Régénération...")
+            print("🔄 Régénération...")
             lettre = _rediger_lettre(offre, evidence_pack, retour_critique=motif_revision)
 
             # Second contrôle factuel obligatoire — le contenu a changé, on ne
@@ -715,7 +715,7 @@ def analyser_et_rediger(
             verification = _verifier_faits(lettre, evidence_pack)
 
             if not verification["fidelite_factuelle_ok"]:
-                print("  🚫 Hallucination persistante après régénération.")
+                print("🚫 Hallucination persistante après régénération.")
                 return None
 
             # La critique qualitative est re-jouée aussi, car le contenu a pu
@@ -726,15 +726,15 @@ def analyser_et_rediger(
             critique = _critiquer_lettre(lettre, offre, evidence_pack)
 
         if not verification["fidelite_factuelle_ok"]:
-            print("  🚫 Lettre rejetée : contrôle factuel négatif.")
+            print("🚫 Lettre rejetée : contrôle factuel négatif.")
             return None
 
         if verification["score_fidelite"] < SCORE_MINIMUM_VALIDATION:
-            print("  🚫 Lettre rejetée : fidélité insuffisante.")
+            print("🚫 Lettre rejetée : fidélité insuffisante.")
             return None
 
         nb_mots = len(lettre.split())
-        print(f"  ✅ Lettre validée ({nb_mots} mots)")
+        print(f"✅ Lettre validée ({nb_mots} mots)")
 
         projets = matching.get("projets_selectionnes", [])
 
