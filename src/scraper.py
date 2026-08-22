@@ -109,7 +109,7 @@ def collecter_offres(recherche=None, localisation=None, limites=5) -> pd.DataFra
             print(f"🔎 Check JobSpy : '{term}' à '{city}'")
             try:
                 jobs = scrape_jobs(
-                    site_name=["linkedin", "indeed", "google", "zip_recruiter"],
+                    site_name=["linkedin", "indeed", "google"],
                     search_term=term,
                     location=city,
                     results_wanted=limites,
