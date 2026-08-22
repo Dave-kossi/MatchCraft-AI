@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 import pandas as pd
 
-from src.agent import analyser_et_rediger
+from src.agent import analyser_et_rediger, ErreurTechniqueMatchCraft
 from src.company_scraper import MOTS_CLES_PAR_DEFAUT, collecter_offres_grands_groupes
 from src.github_parser import lire_profil_github
 from src.historique import (
@@ -111,7 +111,7 @@ def tout_rassembler() -> pd.DataFrame:
         if est_stage_data_valide(str(row.get("title", "")), str(row.get("description", "")))
     ]
 
-    print(f"📊 Total scanné : {len(df_brut)} | Retenu après pré-filtrage : {len(offres_filtrees)}")
+    print(f" Total scanné : {len(df_brut)} | Retenu après pré-filtrage : {len(offres_filtrees)}")
     return pd.DataFrame(offres_filtrees)
 
 
@@ -140,6 +140,8 @@ def execution_job():
 
     print(f"⚡ {len(offres)} offres prêtes pour évaluation agentique...\n")
 
+    nb_echecs_techniques = 0
+
     for _, row in offres.iterrows():
         job_id = str(row.get("job_url", "")).strip()
 
@@ -165,12 +167,22 @@ def execution_job():
         }
 
         # Pipeline LLM (Matching + Storytelling + Lettre)
-        analyse = analyser_et_rediger(
-            offre=offre_dict,
-            cv_texte=cv_texte,
-            portfolio_texte=portfolio_texte,
-            github_texte=github_texte,
-        )
+        try:
+            analyse = analyser_et_rediger(
+                offre=offre_dict,
+                cv_texte=cv_texte,
+                portfolio_texte=portfolio_texte,
+                github_texte=github_texte,
+            )
+        except ErreurTechniqueMatchCraft as e:
+            # Échec TECHNIQUE (API Groq, JSON malformé...) — jamais mis en cache
+            # de rejet : l'offre doit pouvoir être retentée au prochain passage,
+            # elle n'a pas été jugée sur le fond.
+            nb_echecs_techniques += 1
+            print(f"   └─ ⚠️ Échec technique (non mémorisé, sera retenté) : {e}")
+            time.sleep(random.uniform(1, 2))
+            continue
+
         score = analyse.get("score_adequation", 0) if isinstance(analyse, dict) else 0
 
         if analyse and score >= SEUIL_SCORE_MIN:
@@ -191,17 +203,24 @@ def execution_job():
             }
             historique.append(resultat)
             ids_connus.add(job_id)
-            print(f"   └─ ✅ QUALIFIÉE ! (Score MatchCraft : {score}%)")
+            print(f"   └─  QUALIFIÉE ! (Score MatchCraft : {score}%)")
         else:
+            # Ici, analyse est soit None (rejet qualité explicite : hallucination
+            # persistante ou fidélité insuffisante — cf. agent.py), soit un score
+            # réel sous le seuil. Dans les deux cas, c'est un jugement sur le fond
+            # de l'offre : le mettre en cache de rejet est légitime et voulu.
             ids_rejetes.add(job_id)
-            print(f"   └─ ❌ ÉCARTÉE (Score MatchCraft : {score}%)")
+            print(f"   └─  ÉCARTÉE (Score MatchCraft : {score}%)")
 
         time.sleep(random.uniform(1, 2))
+
+    if nb_echecs_techniques:
+        print(f"\n {nb_echecs_techniques} offre(s) non traitée(s) suite à un échec technique — seront retentées au prochain passage.")
 
     # Sauvegarde locale finale
     sauvegarder_historique(historique)
     sauvegarder_ids_rejetes(ids_rejetes)
-    print("\n✅ [MatchCraft AI] Enregistrement local terminé avec succès !")
+    print("\n [MatchCraft AI] Enregistrement local terminé avec succès !")
 
 
 if __name__ == "__main__":
