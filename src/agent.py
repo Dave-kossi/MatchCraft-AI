@@ -12,8 +12,17 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-MODEL_LEGER = "openai/gpt-oss-20b"
-MODEL_REDACTION = "openai/gpt-oss-120b"
+MODEL_LEGER = "qwen/qwen3.6-27b"       # analyse offre, fact-check, critique — reasoning_effort="none" (off complet)
+MODEL_REDACTION = "openai/gpt-oss-120b"  # matching + rédaction — bénéficient du raisonnement, reasoning_effort="low"
+
+# Répartir le pipeline sur 2 modèles distincts au lieu d'un seul exploite le fait
+# que Groq applique un quota (RPM/RPD/TPM) SÉPARÉ par modèle. Avec 5 appels/offre
+# sur un seul modèle, on tape un seul quota ~5x plus vite. En scindant 3 appels
+# structurés (Qwen, reasoning="none", zéro coût de raisonnement) et 2 appels qui
+# ont vraiment besoin de jugement (gpt-oss-120b, reasoning="low"), chaque modèle
+# absorbe moins de charge sur son propre quota. Les chiffres exacts de quota
+# évoluent régulièrement chez Groq — vérifier console.groq.com/settings/limits
+# plutôt que de se fier à un chiffre figé en dur ici.
 
 SCORE_REGENERATION_SEUIL = 7
 SCORE_MINIMUM_VALIDATION = 7
@@ -52,13 +61,29 @@ def _appel_groq(
     temperature: float,
     max_tokens: int,
     json_mode: bool = True,
+    reasoning_effort: str = "low",
 ):
-    """Centralise tous les appels Groq — retry automatique, backoff progressif, JSON strict si demandé."""
+    """
+    Centralise tous les appels Groq — retry automatique, backoff progressif, JSON strict si demandé.
+
+    reasoning_effort : openai/gpt-oss-* n'accepte que low/medium/high (pas de vrai
+    "off" — on utilise "low" pour ces appels). qwen/qwen3.6-27b accepte "none" pour
+    désactiver complètement le raisonnement — utilisé pour les 3 étapes purement
+    structurées (analyse offre, fact-check, critique) qui n'ont pas besoin de
+    chaîne de raisonnement. Sans ce contrôle, le raisonnement interne peut épuiser
+    tout le budget max_tokens avant que le JSON final ne soit généré → erreur Groq
+    "max completion tokens reached before generating a valid document" / failed_generation
+    vide. Chaque appelant passe la valeur adaptée à son modèle — voir chaque fonction.
+    reasoning_format="hidden" retire le raisonnement du contenu retourné (recommandé
+    par Groq en mode JSON — seuls "hidden" et "parsed" sont supportés avec response_format).
+    """
     kwargs = {
         "messages": messages,
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "reasoning_effort": reasoning_effort,
+        "reasoning_format": "hidden",
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
@@ -163,8 +188,9 @@ FORMAT :
         ],
         model=MODEL_LEGER,
         temperature=0.1,
-        max_tokens=1200,
+        max_tokens=2200,
         json_mode=True,
+        reasoning_effort="none",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
@@ -286,8 +312,9 @@ FORMAT JSON STRICT :
         ],
         model=MODEL_REDACTION,
         temperature=0.1,
-        max_tokens=1800,
+        max_tokens=3000,
         json_mode=True,
+        reasoning_effort="low",
     )
 
     return _json_valide(response.choices[0].message.content)
@@ -460,8 +487,9 @@ Rédige maintenant la lettre.
         ],
         model=MODEL_REDACTION,
         temperature=0.35,
-        max_tokens=1800,
+        max_tokens=2600,
         json_mode=False,
+        reasoning_effort="low",
     )
 
     lettre = response.choices[0].message.content
@@ -517,8 +545,9 @@ Réponds UNIQUEMENT en JSON :
         ],
         model=MODEL_LEGER,
         temperature=0,
-        max_tokens=700,
+        max_tokens=1500,
         json_mode=True,
+        reasoning_effort="none",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
@@ -596,8 +625,9 @@ Réponds UNIQUEMENT en JSON :
         ],
         model=MODEL_LEGER,
         temperature=0,
-        max_tokens=700,
+        max_tokens=1500,
         json_mode=True,
+        reasoning_effort="none",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
