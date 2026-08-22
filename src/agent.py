@@ -46,6 +46,36 @@ MAX_CV_CHARS = 5000
 MAX_PORTFOLIO_CHARS = 6000
 MAX_GITHUB_CHARS = 6000
 
+# Termes internes au pipeline qui ne doivent JAMAIS apparaître dans une lettre
+# adressée à un recruteur — le modèle sait qu'il manipule un "Evidence Pack",
+# un "score d'adéquation", des "besoins_entreprise"... et peut, par accident,
+# nommer ces artefacts au lieu de simplement s'appuyer dessus. Une instruction
+# de prompt seule ("ne mentionne jamais X") n'est pas fiable à 100% — ce
+# contrôle Python est déterministe et détecte la fuite après coup, quel que
+# soit le prompt utilisé.
+TERMES_META_INTERDITS = [
+    "evidence pack",
+    "besoin_id",
+    "besoins_entreprise",
+    "score_adequation",
+    "score d'adéquation",
+    "niveau_correspondance",
+    "aucune_preuve",
+    "matching candidat",
+    "l'evidence",
+    "projets_selectionnes",
+    "facteur_differenciant",
+]
+
+
+def _fuite_meta_detectee(lettre: str) -> Optional[str]:
+    """Retourne le premier terme interne détecté dans la lettre, ou None si RAS."""
+    lettre_lower = lettre.lower()
+    for terme in TERMES_META_INTERDITS:
+        if terme in lettre_lower:
+            return terme
+    return None
+
 
 # ============================================================
 # OUTILS GÉNÉRIQUES
@@ -435,13 +465,13 @@ Tu rédiges une lettre de motivation professionnelle, naturelle, spécifique
 
 POSTURE : Un recruteur reçoit des centaines de candidatures pour cette offre.
 Chaque phrase doit répondre implicitement à "pourquoi ce candidat plutôt
-qu'un autre profil Data/IA de même niveau" — via des faits précis de
-l'Evidence Pack, jamais via des superlatifs.
+qu'un autre profil Data/IA de même niveau" — via des faits précis fournis
+ci-dessous, jamais via des superlatifs.
 
 ENTREPRISE : {offre.get("company", "")}
 POSTE : {offre.get("title", "")}
 
-EVIDENCE PACK AUTORISÉ :
+FAITS VÉRIFIÉS AUTORISÉS (usage interne — ne jamais nommer cette source dans le texte) :
 {evidence}
 
 RÈGLES ABSOLUES
@@ -464,6 +494,11 @@ RÈGLES ABSOLUES
 12. La lettre doit rester humaine, pas un rapport technique.
 13. Varie la formulation de l'accroche d'une lettre à l'autre — évite les
     tournures d'ouverture répétitives type "correspond exactement à la mission de X".
+14. N'utilise JAMAIS dans le texte de la lettre des termes qui désignent le
+    processus d'analyse lui-même (ex: "Evidence Pack", "score", "matching",
+    "besoin identifié par l'analyse"...). Ces éléments sont des outils de
+    rédaction internes, invisibles pour le recruteur — appuie-toi sur les faits
+    qu'ils contiennent sans jamais les nommer.
 
 STRUCTURE
 - Objet
@@ -690,6 +725,24 @@ def analyser_et_rediger(
 
         print("  3️⃣ Rédaction de la lettre...")
         lettre = _rediger_lettre(offre, evidence_pack)
+
+        terme_fuite = _fuite_meta_detectee(lettre)
+        if terme_fuite:
+            print(f"  ⚠️ Fuite de terminologie interne détectée ('{terme_fuite}') — régénération immédiate.")
+            lettre = _rediger_lettre(
+                offre,
+                evidence_pack,
+                retour_critique=(
+                    f"La lettre mentionne littéralement le terme interne '{terme_fuite}', qui est un "
+                    "artefact du processus d'analyse et ne doit JAMAIS apparaître dans le texte visible "
+                    "par le recruteur. Réécris sans jamais nommer d'éléments du processus d'analyse "
+                    "(Evidence Pack, scores, ids de besoins...) — appuie-toi dessus sans les citer."
+                ),
+            )
+            terme_fuite_2 = _fuite_meta_detectee(lettre)
+            if terme_fuite_2:
+                print(f"  🚫 Fuite persistante après régénération ('{terme_fuite_2}') — offre écartée par prudence.")
+                return None
 
         print("  4️⃣ Vérification factuelle...")
         verification = _verifier_faits(lettre, evidence_pack)
