@@ -32,7 +32,7 @@ MODEL_REDACTION = "openai/gpt-oss-120b"  # matching + rédaction — bénéficie
 # structurés (Qwen, reasoning="none", zéro coût de raisonnement) et 2 appels qui
 # ont vraiment besoin de jugement (gpt-oss-120b, reasoning="low"), chaque modèle
 # absorbe moins de charge sur son propre quota. Les chiffres exacts de quota
-# évoluent régulièrement chez Groq — vérifier console.groq.com/settings/limits
+# évoluent régulièrement chez Groq — a vérifier console.groq.com/settings/limits
 # plutôt que de se fier à un chiffre figé en dur ici.
 
 SCORE_REGENERATION_SEUIL = 7
