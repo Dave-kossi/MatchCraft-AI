@@ -12,11 +12,7 @@ MOTS_CLES_PAR_DEFAUT = [
     "Stage Data Science", "Alternance Data Science",
     "Stage Machine Learning", "Alternance Machine Learning",
 ]
-
-
-# ==========================================
-# SOURCE OPÉRATIONNELLE — confirmée en fonctionnement
-# ==========================================
+# SOURCE OPÉRATIONNELLE 
 def _requete_bnp(mot_cle: str, limite: int) -> list:
     offres = []
     try:
@@ -31,20 +27,15 @@ def _requete_bnp(mot_cle: str, limite: int) -> list:
                     "job_url": f"https://jobs.smartrecruiters.com/BNPParibas/{job.get('id')}"
                 })
         else:
-            print(f"⚠️ BNP Paribas status {res.status_code}")
+            print(f" BNP Paribas status {res.status_code}")
     except Exception as e:
-        print(f"⚠️ Erreur BNP Paribas : {e}")
+        print(f" Erreur BNP Paribas : {e}")
     return offres
 
 
 SOURCES_OPERATIONNELLES = [_requete_bnp]
+#################################################################
 
-
-# ==========================================
-# SOURCES EN PAUSE — code gardé pour référence, retiré du pipeline actif
-# suite aux échecs constatés le [date du run]. Diagnostic déjà posé,
-# à corriger dès que l'endpoint réel est reconfirmé manuellement.
-# ==========================================
 def _requete_airbus(mot_cle: str, limite: int) -> list:
     """EN PAUSE — ag.jobs2web.com ne se résout plus en DNS (échec de résolution,
     pas un blocage HTTP). Soit Airbus a changé de prestataire ATS, soit c'est un
@@ -62,9 +53,9 @@ def _requete_airbus(mot_cle: str, limite: int) -> list:
                     "job_url": job.get('url')
                 })
         else:
-            print(f"⚠️ Airbus status {res.status_code}")
+            print(f" Airbus status {res.status_code}")
     except Exception as e:
-        print(f"⚠️ Erreur Airbus : {e}")
+        print(f" Erreur Airbus : {e}")
     return offres
 
 
@@ -89,9 +80,9 @@ def _requete_thales(mot_cle: str, limite: int) -> list:
                     "job_url": "https://thales.wd3.myworkdayjobs.com/en-US/Careers" + job.get('externalPath', '')
                 })
         else:
-            print(f"⚠️ Thales status {res.status_code}")
+            print(f"Thales status {res.status_code}")
     except Exception as e:
-        print(f"⚠️ Erreur Thales : {e}")
+        print(f" Erreur Thales : {e}")
     return offres
 
 
@@ -112,20 +103,13 @@ def _requete_sg(mot_cle: str, limite: int) -> list:
                     "job_url": f"https://careers.societegenerale.com/offres-d-emploi/{job.get('slug', '')}"
                 })
         else:
-            print(f"⚠️ Société Générale status {res.status_code}")
+            print(f"Société Générale status {res.status_code}")
     except Exception as e:
-        print(f"⚠️ Erreur Société Générale : {e}")
+        print(f"Erreur Société Générale : {e}")
     return offres
 
+# SOURCES À INTÉGRER
 
-# ==========================================
-# SOURCES À INTÉGRER — endpoint jamais identifié.
-#
-# Méthode : ouvrir "url_carriere" → F12 → onglet Réseau → filtrer "Fetch/XHR"
-# → lancer une recherche sur le site → repérer l'appel qui retourne du JSON
-# avec la liste d'offres → écrire une fonction _requete_xxx() sur le modèle
-# de _requete_bnp() → l'ajouter à SOURCES_OPERATIONNELLES.
-# ==========================================
 SOURCES_A_INTEGRER = [
     {"nom": "TotalEnergies", "secteur": "Énergie", "url_carriere": "https://jobs.totalenergies.com"},
     {"nom": "ENGIE", "secteur": "Énergie", "url_carriere": "https://jobs.engie.com"},
