@@ -228,7 +228,7 @@ Les contributions sont bienvenues : fork, branche, pull request avec une descrip
 
 ## Licence
 
-MIT — utilisation, modification et redistribution libres, y compris à des fins commerciales, sous réserve de conserver la mention de licence. *(à confirmer par le mainteneur avant publication du repo)*
+MIT utilisation, modification et redistribution libres, y compris à des fins commerciales, sous réserve de conserver la mention de licence. 
 
 ---
 
