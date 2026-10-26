@@ -24,8 +24,8 @@ from src.scraper import collecter_offres
 GITHUB_USERNAME = "Dave-kossi"
 SEUIL_SCORE_MIN = 70
 # Quota gratuit Groq : ~200k tokens/jour/modèle, ~20-25k tokens par offre analysée.
-# On plafonne donc le nombre de NOUVELLES offres analysées par passage (4 passages/jour).
-MAX_OFFRES_PAR_RUN = 4
+# On plafonne donc le nombre de NOUVELLES offres analysées par passage (2 passages/jour).
+MAX_OFFRES_PAR_RUN = 8
 
 CHEMIN_CV = "data/CV_Data_Sc&IA.pdf"
 CHEMIN_PORTFOLIO = "data/portfolio.html"
