@@ -23,7 +23,7 @@ class ErreurTechniqueMatchCraft(Exception):
     """
     pass
 
-MODEL_LEGER = "qwen/qwen3.6-27b"       # analyse offre, fact-check, critique — reasoning_effort="none" (off complet)
+MODEL_LEGER = "openai/gpt-oss-120b"     # analyse offre, fact-check, critique — reasoning_effort="low" (qwen3.6-27b retiré par Groq le 14/09/2026)
 MODEL_REDACTION = "openai/gpt-oss-120b"  # matching + rédaction — bénéficient du raisonnement, reasoning_effort="low"
 
 # Répartir le pipeline sur 2 modèles distincts au lieu d'un seul exploite le fait
@@ -229,9 +229,9 @@ FORMAT :
         ],
         model=MODEL_LEGER,
         temperature=0.1,
-        max_tokens=2200,
+        max_tokens=3500,
         json_mode=True,
-        reasoning_effort="none",
+        reasoning_effort="low",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
@@ -591,9 +591,9 @@ Réponds UNIQUEMENT en JSON :
         ],
         model=MODEL_LEGER,
         temperature=0,
-        max_tokens=1500,
+        max_tokens=2500,
         json_mode=True,
-        reasoning_effort="none",
+        reasoning_effort="low",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
@@ -671,9 +671,9 @@ Réponds UNIQUEMENT en JSON :
         ],
         model=MODEL_LEGER,
         temperature=0,
-        max_tokens=1500,
+        max_tokens=2500,
         json_mode=True,
-        reasoning_effort="none",
+        reasoning_effort="low",
     )
 
     resultat = _json_valide(response.choices[0].message.content)
