@@ -24,7 +24,7 @@ from src.scraper import collecter_offres
 GITHUB_USERNAME = "Dave-kossi"
 SEUIL_SCORE_MIN = 70
 
-CHEMIN_CV = "data/cv.pdf"
+CHEMIN_CV = "data/CV_Data_Sc&IA.pdf"
 CHEMIN_PORTFOLIO = "data/portfolio.html"
 CHEMIN_REJETS = "data/offres_rejetees.json"
 
@@ -78,7 +78,7 @@ def charger_ids_rejetes(chemin: str = CHEMIN_REJETS) -> set:
 def sauvegarder_ids_rejetes(ids: set, chemin: str = CHEMIN_REJETS):
     os.makedirs(os.path.dirname(chemin), exist_ok=True)
     with open(chemin, "w", encoding="utf-8") as f:
-        json.dump(list(ids), f, ensure_ascii=False, indent=2)
+        json.dump(sorted(ids), f, ensure_ascii=False, indent=2)
 
 
 # ==========================================
@@ -122,6 +122,9 @@ def execution_job():
     print(f"\n🚀 [MatchCraft AI] Démarrage de l'agent pour {GITHUB_USERNAME}...")
 
     cv_texte = lire_cv_pdf(CHEMIN_CV) if os.path.exists(CHEMIN_CV) else ""
+    if len(cv_texte.strip()) < 200:
+        # Sans CV exploitable, le matching et le fact-check sont faussés : on arrête.
+        raise SystemExit(f"❌ CV introuvable ou vide ({CHEMIN_CV}) — arrêt de l'agent.")
     portfolio_texte = lire_portfolio_html(CHEMIN_PORTFOLIO) if os.path.exists(CHEMIN_PORTFOLIO) else ""
     github_texte = lire_profil_github(GITHUB_USERNAME)
 
@@ -141,6 +144,7 @@ def execution_job():
     print(f"⚡ {len(offres)} offres prêtes pour évaluation agentique...\n")
 
     nb_echecs_techniques = 0
+    nb_analysees_total = 0
 
     for _, row in offres.iterrows():
         job_id = str(row.get("job_url", "")).strip()
@@ -148,6 +152,7 @@ def execution_job():
         if not job_id or job_id in ids_connus or job_id in ids_rejetes:
             continue
 
+        nb_analysees_total += 1
         entreprise = row.get("company", "Inconnue")
         titre = row.get("title", "Sans titre")
         raw_site = row.get("site", "Autre")
@@ -217,10 +222,14 @@ def execution_job():
     if nb_echecs_techniques:
         print(f"\n {nb_echecs_techniques} offre(s) non traitée(s) suite à un échec technique — seront retentées au prochain passage.")
 
-    # Sauvegarde locale finale
+    # Sauvegarde locale finale (avant toute alerte, pour ne rien perdre)
     sauvegarder_historique(historique)
     sauvegarder_ids_rejetes(ids_rejetes)
     print("\n [MatchCraft AI] Enregistrement local terminé avec succès !")
+
+    # Run en ROUGE si le LLM est en panne (ex. modèle retiré) : plus de panne silencieuse.
+    if nb_analysees_total and nb_echecs_techniques == nb_analysees_total:
+        raise SystemExit("❌ Tous les appels LLM ont échoué (modèle retiré, clé invalide ou quota) — voir les logs.")
 
 
 if __name__ == "__main__":
