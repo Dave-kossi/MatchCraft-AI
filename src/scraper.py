@@ -93,7 +93,7 @@ def _normaliser_dataframe(df: pd.DataFrame, site_defaut: str = "JobSpy") -> pd.D
 def collecter_offres(recherche=None, localisation=None, limites=5) -> pd.DataFrame:
     """
     Parcourt les combinaisons de mots-clés et de villes sur JobSpy
-    (LinkedIn, Indeed, Google, ZipRecruiter).
+    (LinkedIn, Indeed).
     Retourne un DataFrame au schéma normalisé.
     """
     toutes_les_offres = []
@@ -103,13 +103,13 @@ def collecter_offres(recherche=None, localisation=None, limites=5) -> pd.DataFra
 
     print(f"🔎 Lancement de la collecte globale sur {len(termes_a_chercher)} termes et {len(villes_a_chercher)} zones...")
 
-    # JobSpy (LinkedIn, Indeed, Google, ZipRecruiter)
+    # JobSpy (LinkedIn, Indeed)
     for term in termes_a_chercher:
         for city in villes_a_chercher:
             print(f"🔎 Check JobSpy : '{term}' à '{city}'")
             try:
                 jobs = scrape_jobs(
-                    site_name=["linkedin", "indeed", "google"],
+                    site_name=["linkedin", "indeed"],
                     search_term=term,
                     location=city,
                     results_wanted=limites,
