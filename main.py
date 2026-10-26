@@ -23,6 +23,9 @@ from src.scraper import collecter_offres
 # ==========================================
 GITHUB_USERNAME = "Dave-kossi"
 SEUIL_SCORE_MIN = 70
+# Quota gratuit Groq : ~200k tokens/jour/modèle, ~20-25k tokens par offre analysée.
+# On plafonne donc le nombre de NOUVELLES offres analysées par passage (4 passages/jour).
+MAX_OFFRES_PAR_RUN = 4
 
 CHEMIN_CV = "data/CV_Data_Sc&IA.pdf"
 CHEMIN_PORTFOLIO = "data/portfolio.html"
@@ -152,6 +155,9 @@ def execution_job():
         if not job_id or job_id in ids_connus or job_id in ids_rejetes:
             continue
 
+        if nb_analysees_total >= MAX_OFFRES_PAR_RUN:
+            print(f"⏸️ Plafond de {MAX_OFFRES_PAR_RUN} offres par passage atteint — le reste sera traité au prochain run.")
+            break
         nb_analysees_total += 1
         entreprise = row.get("company", "Inconnue")
         titre = row.get("title", "Sans titre")
@@ -184,6 +190,9 @@ def execution_job():
             # de rejet : l'offre doit pouvoir être retentée au prochain passage,
             # elle n'a pas été jugée sur le fond.
             nb_echecs_techniques += 1
+            if "tokens per day" in str(e) or "rate_limit" in str(e):
+                print("   └─ ⛔ Quota journalier Groq atteint — arrêt du passage (reprise au prochain run).")
+                break
             print(f"   └─ ⚠️ Échec technique (non mémorisé, sera retenté) : {e}")
             time.sleep(random.uniform(1, 2))
             continue

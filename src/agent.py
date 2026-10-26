@@ -23,7 +23,7 @@ class ErreurTechniqueMatchCraft(Exception):
     """
     pass
 
-MODEL_LEGER = "openai/gpt-oss-120b"     # analyse offre, fact-check, critique — reasoning_effort="low" (qwen3.6-27b retiré par Groq le 14/09/2026)
+MODEL_LEGER = "openai/gpt-oss-20b"      # analyse offre, fact-check, critique — reasoning_effort="low". Quota journalier (TPD) distinct de gpt-oss-120b. (qwen3.6-27b retiré par Groq le 14/09/2026)
 MODEL_REDACTION = "openai/gpt-oss-120b"  # matching + rédaction — bénéficient du raisonnement, reasoning_effort="low"
 
 # Répartir le pipeline sur 2 modèles distincts au lieu d'un seul exploite le fait
@@ -139,7 +139,7 @@ def _appel_groq(
             if tentative < MAX_RETRIES_API:
                 time.sleep(RETRY_BASE_DELAY * tentative)
 
-    raise RuntimeError(f"Échec définitif de l'appel Groq après {MAX_RETRIES_API} tentatives.") from derniere_erreur
+    raise RuntimeError(f"Échec définitif de l'appel Groq après {MAX_RETRIES_API} tentatives : {derniere_erreur}") from derniere_erreur
 
 
 # ============================================================
